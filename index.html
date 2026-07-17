@@ -1,345 +1,612 @@
 <!DOCTYPE html>
-<html lang="de">
+<html lang="de" data-theme="dark">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-    <meta name="description" content="HRT Dashboard - Bonusauszahlungen verwalten">
-    <title>HRT Dashboard</title>
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>HRT</text></svg>">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="description" content="HRT Dashboard - Premium Bonusauszahlungs-System">
+    <meta name="theme-color" content="#0a0a1a">
+    <title>HRT Dashboard | Premium</title>
     
-    <!-- Load JSZip for export functionality -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <!-- Favicon (Inline SVG - No 404) -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230a0a1a'/><text x='50' y='65' font-family='system-ui, sans-serif' font-size='45' font-weight='700' fill='%233b82f6' text-anchor='middle'>HRT</text></svg>">
     
-    <!-- Modern, clean styles -->
+    <!-- Preconnect for Performance -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+    
+    <!-- Premium Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    
+    <!-- GSAP for Advanced Animations -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js" defer></script>
+    
+    <!-- JSZip for Export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" defer></script>
+    
+    <!-- Firebase SDK -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
+        import { getDatabase, ref, get, set, push, remove, update, onValue } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-database.js";
+        
+        const firebaseConfig = {
+            apiKey: "AIzaSyDUxM0DHEhQjtBsKOJWQNDmZrPEr-fqGLw",
+            authDomain: "hrtbonusauszahlungen.firebaseapp.com",
+            databaseURL: "https://hrtbonusauszahlungen-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "hrtbonusauszahlungen",
+            storageBucket: "hrtbonusauszahlungen.firebasestorage.app",
+            messagingSenderId: "77806251754",
+            appId: "1:77806251754:web:56be35a7915de1ba69f193"
+        };
+        
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+        
+        window.HRT = window.HRT || {};
+        window.HRT.db = db;
+        window.HRT.ref = ref;
+        window.HRT.get = get;
+        window.HRT.set = set;
+        window.HRT.push = push;
+        window.HRT.remove = remove;
+        window.HRT.update = update;
+        window.HRT.onValue = onValue;
+    </script>
+    
+    <!-- Premium Styles -->
     <link rel="stylesheet" href="styles.css">
 </head>
+
 <body>
-    <!-- Toast Notification -->
-    <div id="toast" role="status" aria-live="polite"></div>
-
-    <!-- Image Modal -->
-    <div id="imageModal">
-        <div class="modal-inner">
-            <div class="modal-close" id="modalClose">&times;</div>
-            <img id="modalImg" src="" alt="Vorschau">
+    <!-- Loading Screen -->
+    <div id="loadingScreen" class="loading-screen">
+        <div class="loading-content">
+            <div class="logo-pulse">
+                <svg class="logo-svg" viewBox="0 0 200 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M20 50V10H40L60 50V10H80L100 50V10H120L140 50V10H160L180 50V10H20Z" fill="url(#logoGradient)"/>
+                    <defs>
+                        <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stop-color="#3b82f6"/>
+                            <stop offset="50%" stop-color="#8b5cf6"/>
+                            <stop offset="100%" stop-color="#ec4899"/>
+                        </linearGradient>
+                    </defs>
+                </svg>
+            </div>
+            <div class="loading-bar">
+                <div class="loading-progress"></div>
+            </div>
+            <p class="loading-text">Initialisiere HRT Dashboard...</p>
         </div>
     </div>
 
-    <!-- Form Modal Overlay -->
-    <div class="form-modal-overlay" id="formModalOverlay"></div>
-    
-    <!-- Form Modal -->
-    <div class="form-modal" id="formModal">
-        <div class="form-modal-header">
-            <h2 id="formModalTitle">Form Modal</h2>
-            <div class="form-modal-close" id="formModalClose" title="Schließen">&times;</div>
-        </div>
-        <div class="form-modal-body" id="formModalBody"></div>
-        <div class="form-modal-footer" id="formModalFooter"></div>
-    </div>
-
-    <!-- Login Section -->
-    <div id="loginSection" class="container">
-        <div class="panel-card" style="padding: 40px 36px;">
-            <div id="authPanelLogin" class="login-form-container">
-                <div class="brand-mark">HRT</div>
-                <h2>Dashboard</h2>
-                <p class="login-hint">Gib deinen persönlichen Access Key ein, um fortzufahren.</p>
-                <div class="form-group">
-                    <input type="text" id="keyInput" placeholder="Access Key eingeben" autocomplete="off">
-                </div>
-                <button id="loginBtn">Anmelden</button>
-                <div class="auth-toggle-link">
-                    <span id="linkToRegister">Kein Key? Antrag erstellen</span>
-                </div>
-            </div>
-
-            <div id="authPanelRegister" class="hidden">
-                <h2>Antrag stellen</h2>
-                <p class="login-hint">Ein Admin wird deinen Key erstellen.</p>
-                <div class="form-group">
-                    <label>Ingame Name</label>
-                    <input type="text" id="regName" placeholder=" " autocomplete="off">
-                </div>
-                <div class="form-group">
-                    <label>Discord Name</label>
-                    <input type="text" id="regDiscord" placeholder=" " autocomplete="off">
-                </div>
-                <div class="form-group">
-                    <label>Spieler-ID</label>
-                    <input type="number" id="regId" placeholder=" ">
-                </div>
-                <div class="form-group">
-                    <label>Abteilung</label>
-                    <input type="text" id="regDept" placeholder=" " autocomplete="off">
-                </div>
-                <button id="registerBtn">Antrag absenden</button>
-                <div class="auth-toggle-link">
-                    <span id="linkToLogin">Bereits registriert? Zum Login</span>
-                </div>
-            </div>
+    <!-- Toast Notification System -->
+    <div id="toastContainer" class="toast-container">
+        <div id="toast" class="toast" role="alert" aria-live="polite">
+            <span class="toast-icon"></span>
+            <span class="toast-message"></span>
         </div>
     </div>
 
-    <!-- Main Section (hidden until logged in) -->
-    <div id="mainSection" class="container hidden">
-        <!-- Header Bar -->
-        <div class="header-bar panel-card">
-            <div>
-                <h2 style="font-size:19px;">HRT Dashboard</h2>
-                <p>Angemeldet als <span id="userRole">-</span></p>
-            </div>
-            <div class="header-buttons">
-                <button id="logoutBtn" class="btn-outline">Sign Out</button>
-                <a href="https://forms.gle/XWQyVkKqHpTZzvFQ8" target="_blank" rel="noopener noreferrer">
-                    <button class="btn-outline">Feedback</button>
-                </a>
-            </div>
+    <!-- Image Preview Modal -->
+    <div id="imageModal" class="modal image-modal">
+        <div class="modal-overlay"></div>
+        <div class="modal-content">
+            <button class="modal-close" id="modalClose" aria-label="Schließen">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M18 6L6 18M6 6l12 12"/>
+                </svg>
+            </button>
+            <img id="modalImg" class="modal-image" src="" alt="Vorschau">
         </div>
+    </div>
 
-        <!-- Tab Bar -->
-        <div class="tab-bar panel-card" id="tabBar">
-            <button class="tab-btn hidden" id="tabBtnAdmin" data-tab="admin">Administration</button>
-            <button class="tab-btn" id="tabBtnBonus" data-tab="bonus">Bonusauszahlungen</button>
-        </div>
-
-        <!-- Admin Tab -->
-        <div id="tabAdmin" class="tab-content">
-            <!-- Entries Panel -->
-            <div class="panel panel-card open">
-                <div class="panel-header" data-toggle-parent>
-                    <h3>Einsendungen <span class="count-pill" id="entriesCountPill">0</span></h3>
-                    <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M6 9l6 6 6-6" />
+    <!-- Form Modal System -->
+    <div id="formModalOverlay" class="modal-overlay"></div>
+    <div id="formModal" class="modal form-modal">
+        <div class="modal-content modal-card">
+            <div class="modal-header">
+                <h2 id="formModalTitle" class="modal-title">Modal</h2>
+                <button class="modal-close" id="formModalClose" aria-label="Schließen">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M18 6L6 18M6 6l12 12"/>
                     </svg>
-                </div>
-                <div class="panel-body">
-                    <!-- Summary Table -->
-                    <div class="table-scroll">
-                        <table class="summary-table">
-                            <thead>
-                                <tr>
-                                    <th data-sort="name">Name<span class="sort-arrow" id="sortArrow-name"></span></th>
-                                    <th data-sort="date">Datum<span class="sort-arrow" id="sortArrow-date"></span></th>
-                                    <th data-sort="activity">Aktivität<span class="sort-arrow" id="sortArrow-activity"></span></th>
-                                    <th data-sort="amount">Betrag<span class="sort-arrow" id="sortArrow-amount"></span></th>
-                                    <th data-sort="status">Status<span class="sort-arrow" id="sortArrow-status"></span></th>
-                                </tr>
-                            </thead>
-                            <tbody id="adminSummaryBody"></tbody>
-                        </table>
-                    </div>
+                </button>
+            </div>
+            <div id="formModalBody" class="modal-body"></div>
+            <div id="formModalFooter" class="modal-footer"></div>
+        </div>
+    </div>
 
-                    <!-- Filters -->
-                    <div class="filter-row">
-                        <div class="form-group" style="margin-bottom:0;">
-                            <label>Nach User filtern</label>
-                            <select id="userFilter">
-                                <option value="all">-- Alle anzeigen --</option>
-                            </select>
+    <!-- Main Application -->
+    <main id="app" class="app">
+        
+        <!-- ==================== AUTH SECTION ==================== -->
+        <section id="authSection" class="auth-section">
+            <div class="auth-container glass-card">
+                <!-- Login Panel -->
+                <div id="loginPanel" class="auth-panel active">
+                    <div class="auth-header">
+                        <div class="logo">
+                            <svg viewBox="0 0 200 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M20 50V10H40L60 50V10H80L100 50V10H120L140 50V10H160L180 50V10H20Z" fill="url(#authGradient)"/>
+                                <defs>
+                                    <linearGradient id="authGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                        <stop offset="0%" stop-color="#3b82f6"/>
+                                        <stop offset="50%" stop-color="#8b5cf6"/>
+                                        <stop offset="100%" stop-color="#ec4899"/>
+                                    </linearGradient>
+                                </defs>
+                            </svg>
                         </div>
-                        <div class="form-group" style="margin-bottom:0;">
-                            <label>Nach Status filtern</label>
-                            <select id="statusFilter">
-                                <option value="all">-- Alle Status --</option>
-                                <option value="offen">Offen</option>
-                                <option value="gesehen">Gesehen</option>
-                                <option value="geschlossen">Ausgezahlt</option>
-                            </select>
-                        </div>
+                        <h1 class="auth-title">HRT Dashboard</h1>
+                        <p class="auth-subtitle">Premium Bonusauszahlungs-System</p>
                     </div>
                     
-                    <div class="form-group">
-                        <label>Suche (Name / Aktivität)</label>
-                        <input type="search" id="entrySearch" placeholder="z.B. Max Mustermann oder Cayo Perico">
-                    </div>
-                    
-                    <!-- Entries List -->
-                    <div id="entriesList">
-                        <div class="skeleton-row">
-                            <div class="skeleton-card"></div>
-                            <div class="skeleton-card"></div>
-                            <div class="skeleton-card"></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Tools Panel -->
-            <div class="panel panel-card">
-                <div class="panel-header" data-toggle-parent>
-                    <h3>Werkzeuge</h3>
-                    <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M6 9l6 6 6-6" />
-                    </svg>
-                </div>
-                <div class="panel-body">
-                    <div class="tool-grid">
-                        <button id="openKeyGeneratorBtn" class="tool-btn">
-                            <span class="tool-icon">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <circle cx="7.5" cy="15.5" r="5.5"/>
-                                    <path d="M21 2l-9.6 9.6"/>
-                                    <path d="M15.5 7.5l3 3L22 7l-3-3"/>
-                                </svg>
-                            </span>
-                            <span class="tool-text">
-                                <strong>Key Manager</strong>
-                                <span>Access Keys erstellen & verwalten</span>
-                            </span>
-                        </button>
-                        
-                        <button id="openCodeGeneratorBtn" class="tool-btn">
-                            <span class="tool-icon">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <path d="M16 18l6-6-6-6"/>
-                                    <path d="M8 6l-6 6 6 6"/>
-                                </svg>
-                            </span>
-                            <span class="tool-text">
-                                <strong>Auszahlungs Codes Generator</strong>
-                                <span>Ingame-Codes pro User erzeugen</span>
-                            </span>
-                        </button>
-                        
-                        <button id="openBonusListBtn" class="tool-btn">
-                            <span class="tool-icon">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <path d="M9 12h6M9 16h6M9 8h6"/>
-                                    <rect x="4" y="3" width="16" height="18" rx="2"/>
-                                </svg>
-                            </span>
-                            <span class="tool-text">
-                                <strong>Boni Listen Generator</strong>
-                                <span>Fertige Discord-Bonusliste erstellen</span>
-                            </span>
-                        </button>
-                        
-                        <button id="exportBtn" class="tool-btn">
-                            <span class="tool-icon">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                                    <polyline points="7 10 12 15 17 10"/>
-                                    <line x1="12" y1="15" x2="12" y2="3"/>
-                                </svg>
-                            </span>
-                            <span class="tool-text">
-                                <strong>Export</strong>
-                                <span>Alle Einsendungen als ZIP exportieren</span>
-                            </span>
-                        </button>
-                    </div>
-                    <div class="divider"></div>
-                    <button id="deleteAllBtn" class="btn-danger-outline">Alle Einsendungen löschen</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Bonus Tab -->
-        <div id="tabBonus" class="tab-content">
-            <!-- New Submission Panel -->
-            <div class="panel panel-card open">
-                <div class="panel-header" data-toggle-parent>
-                    <h3>Neuen Nachweis einreichen</h3>
-                    <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M6 9l6 6 6-6" />
-                    </svg>
-                </div>
-                <div class="panel-body">
-                    <!-- Cap Display -->
-                    <div class="cap-block">
-                        <div class="cap-label-row">
-                            <span>Bonus Cap</span>
-                            <strong id="capLabel">$0 / $200.000</strong>
-                        </div>
-                        <div class="cap-bar-track">
-                            <div class="cap-bar-fill" id="capBarFill"></div>
-                        </div>
-                        <div id="capWarning" class="cap-warning hidden">Cap von $200.000 erreicht.</div>
-                    </div>
-                    
-                    <!-- User Info -->
-                    <div class="user-info-display" id="userNameDisplay">
-                        <span>Angemeldet als</span>
-                        <span id="userNameLabel">–</span>
-                    </div>
-
-                    <!-- Activity Select (hidden but used for data) -->
-                    <select id="activitySelect" style="display: none;">
-                        <option value="MPÜ (20.000$)">MPÜ (20.000$)</option>
-                        <option value="Geiselnahme Anfahren (7.500$)">Geiselnahme Anfahren (7.500$)</option>
-                        <option value="Bank / Ladenraub - Einsatzleitung (20.000$)">Bank / Ladenraub - Einsatzleitung (20.000$)</option>
-                        <option value="Bank / Ladenraub - Verhandlungsführung (20.000$)">Bank / Ladenraub - Verhandlungsführung (20.000$)</option>
-                        <option value="Attack of Terror - Einsatzleitung (25.000$)">Attack of Terror - Einsatzleitung (25.000$)</option>
-                        <option value="Attack of Terror - Verhandlungsführung (25.000$)">Attack of Terror - Verhandlungsführung (25.000$)</option>
-                        <option value="Inspektion (30.000$)">Inspektion (30.000$)</option>
-                        <option value="Razzia (20.000$)">Razzia (20.000$)</option>
-                        <option value="Haftbefehl Vollstrecken (15.000$)">Haftbefehl Vollstrecken (15.000$)</option>
-                        <option value="Cayo Perico (15.000$)">Cayo Perico (15.000$)</option>
-                        <option value="Fort Zancudo (15.000$)">Fort Zancudo (15.000$)</option>
-                        <option value="Crafting Konvoi (12.500$)">Crafting Konvoi (12.500$)</option>
-                        <option value="Rangliste anfahren (10.000$)">Rangliste anfahren (10.000$)</option>
-                        <option value="Rangliste gewinnen (20.000$)">Rangliste gewinnen (20.000$)</option>
-                        <option value="Airdrop anfahren (10.000$)">Airdrop anfahren (10.000$)</option>
-                        <option value="Airdrop gewinnen (20.000$)">Airdrop gewinnen (20.000$)</option>
-                        <option value="MCL / Zone Wars anfahren (7.500$)">MCL / Zone Wars anfahren (7.500$)</option>
-                        <option value="MCL / Zone Wars gewinnen (20.000$)">MCL / Zone Wars gewinnen (20.000$)</option>
-                        <option value="Ausbildung Erledigt (10.000$)">Ausbildung Erledigt (10.000$)</option>
-                        <option value="Ausbildung zeitgleich (15.000$)">Ausbildung zeitgleich für 3+ Personen (15.000$)</option>
-                    </select>
-
-                    <!-- File Upload Area -->
-                    <div id="uploadFormArea">
+                    <form id="loginForm" class="auth-form">
                         <div class="form-group">
-                            <label>Nachweis-Bild hochladen</label>
-                            <div class="file-upload-wrapper" id="fileUploadWrapper">
-                                <input type="file" id="fileInput" accept="image/*" style="display: none;">
-                                <div class="file-upload-trigger" id="fileUploadTrigger">
-                                    <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                                        <polyline points="17 8 12 3 7 8" />
-                                        <line x1="12" y1="3" x2="12" y2="15" />
+                            <label for="keyInput" class="form-label">Access Key</label>
+                            <div class="input-wrapper">
+                                <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 10.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0z"/>
+                                </svg>
+                                <input 
+                                    type="text" 
+                                    id="keyInput" 
+                                    class="form-input" 
+                                    placeholder="Gib deinen Access Key ein..." 
+                                    autocomplete="off"
+                                    required
+                                >
+                            </div>
+                        </div>
+                        <button type="submit" id="loginBtn" class="btn btn-primary btn-full">
+                            <span class="btn-text">Anmelden</span>
+                            <span class="btn-loader"></span>
+                        </button>
+                    </form>
+                    
+                    <div class="auth-footer">
+                        <p>Keinen Key? <button id="showRegister" class="link-btn">Antrag stellen</button></p>
+                    </div>
+                </div>
+                
+                <!-- Register Panel -->
+                <div id="registerPanel" class="auth-panel">
+                    <div class="auth-header">
+                        <h1 class="auth-title">Antrag stellen</h1>
+                        <p class="auth-subtitle">Ein Admin wird deinen Key erstellen</p>
+                    </div>
+                    
+                    <form id="registerForm" class="auth-form">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="regName" class="form-label">Ingame Name</label>
+                                <div class="input-wrapper">
+                                    <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                                        <circle cx="12" cy="7" r="4"/>
                                     </svg>
-                                    <span class="upload-text">Bild auswählen</span>
-                                    <span class="upload-info">Klicken oder Bild hierher ziehen</span>
+                                    <input 
+                                        type="text" 
+                                        id="regName" 
+                                        class="form-input" 
+                                        placeholder="Max Mustermann" 
+                                        autocomplete="off"
+                                        required
+                                    >
                                 </div>
-                                <div class="file-upload-preview hidden" id="filePreviewContainer">
-                                    <img id="filePreviewImage" src="" alt="Vorschau">
-                                    <span id="fileNameLabel"></span>
-                                    <span class="remove-file" id="removeFileBtn" title="Datei entfernen">&times;</span>
+                            </div>
+                            <div class="form-group">
+                                <label for="regDiscord" class="form-label">Discord Name</label>
+                                <div class="input-wrapper">
+                                    <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                                    </svg>
+                                    <input 
+                                        type="text" 
+                                        id="regDiscord" 
+                                        class="form-input" 
+                                        placeholder="User#1234" 
+                                        autocomplete="off"
+                                        required
+                                    >
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="regId" class="form-label">Spieler-ID</label>
+                                <div class="input-wrapper">
+                                    <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                                        <circle cx="9" cy="7" r="4"/>
+                                        <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>
+                                    </svg>
+                                    <input 
+                                        type="number" 
+                                        id="regId" 
+                                        class="form-input" 
+                                        placeholder="123456" 
+                                        required
+                                    >
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="regDept" class="form-label">Abteilung</label>
+                                <div class="input-wrapper">
+                                    <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                        <polyline points="14 2 14 8 20 8"/>
+                                        <line x1="16" y1="13" x2="8" y2="13"/>
+                                        <line x1="16" y1="17" x2="8" y2="17"/>
+                                    </svg>
+                                    <input 
+                                        type="text" 
+                                        id="regDept" 
+                                        class="form-input" 
+                                        placeholder="HRT" 
+                                        autocomplete="off"
+                                        required
+                                    >
+                                </div>
+                            </div>
+                        </div>
+                        <button type="submit" id="registerBtn" class="btn btn-primary btn-full">
+                            <span class="btn-text">Antrag absenden</span>
+                            <span class="btn-loader"></span>
+                        </button>
+                    </form>
+                    
+                    <div class="auth-footer">
+                        <p>Bereits registriert? <button id="showLogin" class="link-btn">Zum Login</button></p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== MAIN APP SECTION ==================== -->
+        <section id="mainSection" class="main-section hidden">
+            
+            <!-- Header -->
+            <header class="app-header">
+                <div class="header-content">
+                    <div class="header-brand">
+                        <svg class="brand-logo" viewBox="0 0 200 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M20 50V10H40L60 50V10H80L100 50V10H120L140 50V10H160L180 50V10H20Z" fill="url(#headerGradient)"/>
+                            <defs>
+                                <linearGradient id="headerGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                    <stop offset="0%" stop-color="#3b82f6"/>
+                                    <stop offset="50%" stop-color="#8b5cf6"/>
+                                    <stop offset="100%" stop-color="#ec4899"/>
+                                </linearGradient>
+                            </defs>
+                        </svg>
+                        <div class="brand-text">
+                            <h1 class="brand-title">HRT Dashboard</h1>
+                            <span class="brand-badge" id="userRole">User</span>
+                        </div>
+                    </div>
+                    <div class="header-actions">
+                        <button id="logoutBtn" class="btn btn-ghost btn-sm">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                                <polyline points="16 17 21 12 16 7"/>
+                                <line x1="21" y1="12" x2="9" y2="12"/>
+                            </svg>
+                            <span>Abmelden</span>
+                        </button>
+                        <a href="https://forms.gle/XWQyVkKqHpTZzvFQ8" target="_blank" rel="noopener noreferrer" class="btn btn-ghost btn-sm">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                            </svg>
+                            <span>Feedback</span>
+                        </a>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Navigation Tabs -->
+            <nav class="app-nav" id="appNav">
+                <button class="nav-btn active" data-tab="bonus" id="tabBtnBonus">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                    </svg>
+                    <span>Bonusauszahlungen</span>
+                </button>
+                <button class="nav-btn hidden" data-tab="admin" id="tabBtnAdmin">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                    </svg>
+                    <span>Administration</span>
+                </button>
+            </nav>
+
+            <!-- Main Content -->
+            <div class="app-content">
+                
+                <!-- ==================== BONUS TAB ==================== -->
+                <div id="tabBonus" class="tab-content active">
+                    
+                    <!-- Cap Display -->
+                    <div class="cap-display glass-card">
+                        <div class="cap-header">
+                            <h2 class="card-title">Bonus Cap</h2>
+                            <span class="cap-badge" id="userNameLabel">–</span>
+                        </div>
+                        <div class="cap-bar-container">
+                            <div class="cap-labels">
+                                <span class="cap-current" id="capLabel">$0</span>
+                                <span class="cap-divider">/</span>
+                                <span class="cap-max">$200.000</span>
+                            </div>
+                            <div class="cap-bar">
+                                <div class="cap-fill" id="capBarFill"></div>
+                            </div>
+                        </div>
+                        <div class="cap-warning hidden" id="capWarning">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="10"/>
+                                <line x1="12" y1="8" x2="12" y2="12"/>
+                                <line x1="12" y1="16" x2="12.01" y2="16"/>
+                            </svg>
+                            <span>Cap von $200.000 erreicht!</span>
+                        </div>
+                    </div>
+
+                    <!-- Submission Panel -->
+                    <div class="panel glass-card">
+                        <div class="panel-header">
+                            <h2 class="card-title">Neuen Nachweis einreichen</h2>
+                            <button class="panel-toggle" data-toggle="uploadPanel">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="6 9 12 15 18 9"/>
+                                </svg>
+                            </button>
+                        </div>
+                        <div class="panel-body" id="uploadPanel">
+                            <div class="upload-area" id="uploadFormArea">
+                                <div class="upload-trigger" id="fileUploadWrapper">
+                                    <input type="file" id="fileInput" accept="image/*" style="display: none;">
+                                    <div class="upload-content">
+                                        <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                            <polyline points="17 8 12 3 7 8"/>
+                                            <line x1="12" y1="3" x2="12" y2="15"/>
+                                        </svg>
+                                        <p class="upload-text">Bild auswählen oder hierher ziehen</p>
+                                        <span class="upload-hint">PNG, JPG, GIF oder WebP (max. 20MB)</span>
+                                    </div>
+                                </div>
+                                <div class="file-preview hidden" id="filePreviewContainer">
+                                    <img id="filePreviewImage" class="preview-image" src="" alt="Vorschau">
+                                    <div class="preview-info">
+                                        <span id="fileNameLabel" class="preview-name"></span>
+                                        <button class="preview-remove" id="removeFileBtn" aria-label="Entfernen">
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                <circle cx="12" cy="12" r="10"/>
+                                                <line x1="15" y1="9" x2="9" y2="15"/>
+                                                <line x1="9" y1="9" x2="15" y2="15"/>
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="loading-area hidden" id="loadingArea">
+                                <div class="spinner"></div>
+                                <span>Wird verarbeitet...</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- My Entries Panel -->
+                    <div class="panel glass-card">
+                        <div class="panel-header">
+                            <h2 class="card-title">Meine Einreichungen <span class="count-pill" id="myEntriesCountPill">0</span></h2>
+                            <button class="panel-toggle" data-toggle="myEntriesPanel">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="6 9 12 15 18 9"/>
+                                </svg>
+                            </button>
+                        </div>
+                        <div class="panel-body" id="myEntriesPanel">
+                            <div class="entries-grid" id="myEntriesList">
+                                <div class="skeleton-loader">
+                                    <div class="skeleton-card"></div>
+                                    <div class="skeleton-card"></div>
+                                    <div class="skeleton-card"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ==================== ADMIN TAB ==================== -->
+                <div id="tabAdmin" class="tab-content">
+                    
+                    <!-- Entries Panel -->
+                    <div class="panel glass-card">
+                        <div class="panel-header">
+                            <h2 class="card-title">Einsendungen <span class="count-pill" id="entriesCountPill">0</span></h2>
+                            <button class="panel-toggle" data-toggle="entriesPanel">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="6 9 12 15 18 9"/>
+                                </svg>
+                            </button>
+                        </div>
+                        <div class="panel-body" id="entriesPanel">
+                            <!-- Summary Table -->
+                            <div class="table-container">
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th data-sort="name">Name <span class="sort-arrow" id="sortArrow-name"></span></th>
+                                            <th data-sort="date">Datum <span class="sort-arrow" id="sortArrow-date"></span></th>
+                                            <th data-sort="activity">Aktivität <span class="sort-arrow" id="sortArrow-activity"></span></th>
+                                            <th data-sort="amount">Betrag <span class="sort-arrow" id="sortArrow-amount"></span></th>
+                                            <th data-sort="status">Status <span class="sort-arrow" id="sortArrow-status"></span></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="adminSummaryBody">
+                                        <tr class="empty-row">
+                                            <td colspan="5" class="empty-state">Keine Daten verfügbar</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            
+                            <!-- Filters -->
+                            <div class="filters-grid">
+                                <div class="form-group">
+                                    <label class="form-label">User filtern</label>
+                                    <select id="userFilter" class="form-select">
+                                        <option value="all">Alle anzeigen</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Status filtern</label>
+                                    <select id="statusFilter" class="form-select">
+                                        <option value="all">Alle Status</option>
+                                        <option value="offen">Offen</option>
+                                        <option value="gesehen">Gesehen</option>
+                                        <option value="geschlossen">Ausgezahlt</option>
+                                    </select>
+                                </div>
+                                <div class="form-group full-width">
+                                    <label class="form-label">Suche</label>
+                                    <div class="input-wrapper">
+                                        <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <circle cx="11" cy="11" r="8"/>
+                                            <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                                        </svg>
+                                        <input 
+                                            type="search" 
+                                            id="entrySearch" 
+                                            class="form-input" 
+                                            placeholder="Suche nach Name oder Aktivität..."
+                                        >
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Entries List -->
+                            <div class="entries-grid" id="entriesList">
+                                <div class="skeleton-loader">
+                                    <div class="skeleton-card"></div>
+                                    <div class="skeleton-card"></div>
+                                    <div class="skeleton-card"></div>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Loading Area -->
-                    <div id="loadingArea" class="hidden">
-                        <div class="loader"></div> Wird verarbeitet…
-                    </div>
-                </div>
-            </div>
-            
-            <!-- My Entries Panel -->
-            <div class="panel panel-card open">
-                <div class="panel-header" data-toggle-parent>
-                    <h3>Meine Einreichungen <span class="count-pill" id="myEntriesCountPill">0</span></h3>
-                    <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M6 9l6 6 6-6" />
-                    </svg>
-                </div>
-                <div class="panel-body">
-                    <div id="myEntriesList">
-                        <div class="skeleton-row">
-                            <div class="skeleton-card"></div>
-                            <div class="skeleton-card"></div>
+                    <!-- Tools Panel -->
+                    <div class="panel glass-card">
+                        <div class="panel-header">
+                            <h2 class="card-title">Admin Werkzeuge</h2>
+                            <button class="panel-toggle" data-toggle="toolsPanel">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="6 9 12 15 18 9"/>
+                                </svg>
+                            </button>
+                        </div>
+                        <div class="panel-body" id="toolsPanel">
+                            <div class="tools-grid">
+                                <button id="openKeyGeneratorBtn" class="tool-card">
+                                    <div class="tool-icon tool-icon-key">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <circle cx="7.5" cy="15.5" r="5.5"/>
+                                            <path d="M21 2l-9.6 9.6"/>
+                                            <path d="M15.5 7.5l3 3L22 7l-3-3"/>
+                                        </svg>
+                                    </div>
+                                    <div class="tool-content">
+                                        <h3 class="tool-title">Key Manager</h3>
+                                        <p class="tool-desc">Access Keys erstellen & verwalten</p>
+                                    </div>
+                                </button>
+                                
+                                <button id="openCodeGeneratorBtn" class="tool-card">
+                                    <div class="tool-icon tool-icon-code">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M16 18l6-6-6-6"/>
+                                            <path d="M8 6l-6 6 6 6"/>
+                                        </svg>
+                                    </div>
+                                    <div class="tool-content">
+                                        <h3 class="tool-title">Code Generator</h3>
+                                        <p class="tool-desc">Auszahlungs-Codes generieren</p>
+                                    </div>
+                                </button>
+                                
+                                <button id="openBonusListBtn" class="tool-card">
+                                    <div class="tool-icon tool-icon-list">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M9 12h6M9 16h6M9 8h6"/>
+                                            <rect x="4" y="3" width="16" height="18" rx="2"/>
+                                        </svg>
+                                    </div>
+                                    <div class="tool-content">
+                                        <h3 class="tool-title">Boni Liste</h3>
+                                        <p class="tool-desc">Discord-Bonusliste erstellen</p>
+                                    </div>
+                                </button>
+                                
+                                <button id="exportBtn" class="tool-card">
+                                    <div class="tool-icon tool-icon-export">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                            <polyline points="7 10 12 15 17 10"/>
+                                            <line x1="12" y1="15" x2="12" y2="3"/>
+                                        </svg>
+                                    </div>
+                                    <div class="tool-content">
+                                        <h3 class="tool-title">Export</h3>
+                                        <p class="tool-desc">Alle Daten als ZIP exportieren</p>
+                                    </div>
+                                </button>
+                            </div>
+                            
+                            <div class="divider"></div>
+                            
+                            <button id="deleteAllBtn" class="btn btn-danger btn-full">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="3 6 5 6 21 6"/>
+                                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                                </svg>
+                                <span>Alle Einsendungen löschen</span>
+                            </button>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
-    </div>
+        </section>
+    </main>
 
-    <!-- Load Application JavaScript -->
+    <!-- Activity Select (Hidden - Used for data) -->
+    <select id="activitySelect" style="display: none;">
+        <option value="MPÜ (20.000$)">MPÜ (20.000$)</option>
+        <option value="Geiselnahme Anfahren (7.500$)">Geiselnahme Anfahren (7.500$)</option>
+        <option value="Bank / Ladenraub - Einsatzleitung (20.000$)">Bank / Ladenraub - Einsatzleitung (20.000$)</option>
+        <option value="Bank / Ladenraub - Verhandlungsführung (20.000$)">Bank / Ladenraub - Verhandlungsführung (20.000$)</option>
+        <option value="Attack of Terror - Einsatzleitung (25.000$)">Attack of Terror - Einsatzleitung (25.000$)</option>
+        <option value="Attack of Terror - Verhandlungsführung (25.000$)">Attack of Terror - Verhandlungsführung (25.000$)</option>
+        <option value="Inspektion (30.000$)">Inspektion (30.000$)</option>
+        <option value="Razzia (20.000$)">Razzia (20.000$)</option>
+        <option value="Haftbefehl Vollstrecken (15.000$)">Haftbefehl Vollstrecken (15.000$)</option>
+        <option value="Cayo Perico (15.000$)">Cayo Perico (15.000$)</option>
+        <option value="Fort Zancudo (15.000$)">Fort Zancudo (15.000$)</option>
+        <option value="Crafting Konvoi (12.500$)">Crafting Konvoi (12.500$)</option>
+        <option value="Rangliste anfahren (10.000$)">Rangliste anfahren (10.000$)</option>
+        <option value="Rangliste gewinnen (20.000$)">Rangliste gewinnen (20.000$)</option>
+        <option value="Airdrop anfahren (10.000$)">Airdrop anfahren (10.000$)</option>
+        <option value="Airdrop gewinnen (20.000$)">Airdrop gewinnen (20.000$)</option>
+        <option value="MCL / Zone Wars anfahren (7.500$)">MCL / Zone Wars anfahren (7.500$)</option>
+        <option value="MCL / Zone Wars gewinnen (20.000$)">MCL / Zone Wars gewinnen (20.000$)</option>
+        <option value="Ausbildung Erledigt (10.000$)">Ausbildung Erledigt (10.000$)</option>
+        <option value="Ausbildung zeitgleich (15.000$)">Ausbildung zeitgleich für 3+ Personen (15.000$)</option>
+    </select>
+
+    <!-- Main Application Script -->
     <script src="app.js"></script>
 </body>
 </html>

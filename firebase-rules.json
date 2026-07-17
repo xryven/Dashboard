@@ -1,0 +1,12 @@
+{
+  "rules": {
+    "keys": {
+      ".read": "auth != null && (root.child('keys/' + auth.uid).val().role === 'admin' || root.child('keys/' + auth.uid).val().role === 'owner')",
+      ".write": "auth != null && (root.child('keys/' + auth.uid).val().role === 'admin' || root.child('keys/' + auth.uid).val().role === 'owner')"
+    },
+    "uploads": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    }
+  }
+}
