@@ -60,10 +60,12 @@ function getAcronym(text) {
 
 function showToast(m, t = 'success') {
     const e = document.getElementById('toast');
-    e.textContent = m; 
-    e.className = `show ${t}`;
-    clearTimeout(showToast._tm);
-    showToast._tm = setTimeout(() => { e.className = ''; }, 3000);
+    if (e) {
+        e.textContent = m; 
+        e.className = `show ${t}`;
+        clearTimeout(showToast._tm);
+        showToast._tm = setTimeout(() => { e.className = ''; }, 3000);
+    }
 }
 
 function generateSecureRandomString(n) {
@@ -146,33 +148,62 @@ function setBtnLoading(btn, loading, loadingLabel, normalLabel) {
 // ==================== MODAL FUNCTIONS ====================
 
 function openFormModal(title, content, footer) {
-    document.getElementById('formModalTitle').textContent = title;
-    document.getElementById('formModalBody').innerHTML = content;
-    document.getElementById('formModalFooter').innerHTML = footer;
-    document.getElementById('formModal').classList.add('active');
-    document.getElementById('formModalOverlay').classList.add('active');
+    const titleEl = document.getElementById('formModalTitle');
+    const bodyEl = document.getElementById('formModalBody');
+    const footerEl = document.getElementById('formModalFooter');
+    
+    if (titleEl && bodyEl && footerEl) {
+        titleEl.textContent = title;
+        bodyEl.innerHTML = content;
+        footerEl.innerHTML = footer;
+        document.getElementById('formModal').classList.add('active');
+        document.getElementById('formModalOverlay').classList.add('active');
+    }
 }
 
 function closeFormModal() {
-    document.getElementById('formModal').classList.remove('active');
-    document.getElementById('formModalOverlay').classList.remove('active');
+    const modal = document.getElementById('formModal');
+    const overlay = document.getElementById('formModalOverlay');
+    if (modal) modal.classList.remove('active');
+    if (overlay) overlay.classList.remove('active');
 }
 
 window.closeFormModal = closeFormModal;
 
-document.getElementById('formModalClose').addEventListener('click', closeFormModal);
-document.getElementById('formModalOverlay').addEventListener('click', closeFormModal);
-document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && document.getElementById('formModal').classList.contains('active')) 
-        closeFormModal();
-});
+// Safe element access
+function safeGetElement(id) {
+    return document.getElementById(id);
+}
+
+// Initialize modal close handlers
+function initModalHandlers() {
+    const closeBtn = safeGetElement('formModalClose');
+    const overlay = safeGetElement('formModalOverlay');
+    
+    if (closeBtn) {
+        closeBtn.addEventListener('click', closeFormModal);
+    }
+    if (overlay) {
+        overlay.addEventListener('click', closeFormModal);
+    }
+    
+    document.addEventListener('keydown', (e) => {
+        const modal = safeGetElement('formModal');
+        if (e.key === 'Escape' && modal && modal.classList.contains('active')) {
+            closeFormModal();
+        }
+    });
+}
 
 // ==================== CUSTOM SELECT ====================
 
 function initCustomSelect(s) {
+    if (!s) return;
+    
     const existingWrapper = s.nextElementSibling;
-    if (existingWrapper && existingWrapper.classList.contains('custom-select-wrapper')) 
+    if (existingWrapper && existingWrapper.classList.contains('custom-select-wrapper')) {
         existingWrapper.remove();
+    }
 
     const w = document.createElement('div');
     w.className = 'custom-select-wrapper';
@@ -235,62 +266,91 @@ document.addEventListener('click', () => {
 
 // ==================== IMAGE MODAL ====================
 
-const modal = document.getElementById('imageModal'), 
-      modalImg = document.getElementById('modalImg');
+function initImageModal() {
+    const modal = safeGetElement('imageModal');
+    const modalImg = safeGetElement('modalImg');
+    const modalClose = safeGetElement('modalClose');
+    
+    if (!modal || !modalImg) return;
 
-function openModal(s) {
-    modalImg.src = s;
-    modal.classList.add('active');
+    function openModal(s) {
+        modalImg.src = s;
+        modal.classList.add('active');
+    }
+
+    function closeModal() {
+        modal.classList.remove('active');
+        setTimeout(() => {
+            if (!modal.classList.contains('active')) modalImg.src = '';
+        }, 350);
+    }
+
+    if (modalClose) {
+        modalClose.addEventListener('click', closeModal);
+    }
+    
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) closeModal();
+    });
+    
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') closeModal();
+    });
+    
+    window.openModal = openModal;
+    window.closeModal = closeModal;
 }
-
-function closeModal() {
-    modal.classList.remove('active');
-    setTimeout(() => {
-        if (!modal.classList.contains('active')) modalImg.src = '';
-    }, 350);
-}
-
-document.getElementById('modalClose').addEventListener('click', closeModal);
-modal.addEventListener('click', (e) => {
-    if (e.target === modal) closeModal();
-});
-document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') closeModal();
-});
 
 function attachImageClicks(container) {
-    (container || document).querySelectorAll('.entry-thumb').forEach(img => {
+    const elements = (container || document).querySelectorAll('.entry-thumb');
+    elements.forEach(img => {
         if (img._clickBound) return;
         img._clickBound = true;
         img.addEventListener('click', (e) => {
             e.preventDefault();
-            openModal(img.dataset.full || img.src);
+            if (window.openModal) {
+                window.openModal(img.dataset.full || img.src);
+            }
         });
     });
 }
 
 // ==================== PANEL TOGGLES ====================
 
-document.querySelectorAll('[data-toggle-parent]').forEach(h => {
-    h.addEventListener('click', () => {
-        h.closest('.panel').classList.toggle('open');
+function initPanelToggles() {
+    document.querySelectorAll('[data-toggle-parent]').forEach(h => {
+        h.addEventListener('click', () => {
+            const panel = h.closest('.panel');
+            if (panel) panel.classList.toggle('open');
+        });
     });
-});
+}
 
 // ==================== TAB SYSTEM ====================
 
 function showTab(t) {
-    document.getElementById('tabAdmin').classList.toggle('active', t === 'admin');
-    document.getElementById('tabExport').classList.toggle('active', t === 'export');
-    document.getElementById('tabBonus').classList.toggle('active', t === 'bonus');
-    document.getElementById('tabBtnAdmin').classList.toggle('active', t === 'admin');
-    document.getElementById('tabBtnExport').classList.toggle('active', t === 'export');
-    document.getElementById('tabBtnBonus').classList.toggle('active', t === 'bonus');
+    const tabAdmin = safeGetElement('tabAdmin');
+    const tabBonus = safeGetElement('tabBonus');
+    const tabBtnAdmin = safeGetElement('tabBtnAdmin');
+    const tabBtnBonus = safeGetElement('tabBtnBonus');
+    
+    if (tabAdmin) tabAdmin.classList.toggle('active', t === 'admin');
+    if (tabBonus) tabBonus.classList.toggle('active', t === 'bonus');
+    if (tabBtnAdmin) tabBtnAdmin.classList.toggle('active', t === 'admin');
+    if (tabBtnBonus) tabBtnBonus.classList.toggle('active', t === 'bonus');
 }
 
-document.getElementById('tabBtnAdmin').addEventListener('click', () => showTab('admin'));
-document.getElementById('tabBtnExport').addEventListener('click', () => showTab('export'));
-document.getElementById('tabBtnBonus').addEventListener('click', () => showTab('bonus'));
+function initTabs() {
+    const tabBtnAdmin = safeGetElement('tabBtnAdmin');
+    const tabBtnBonus = safeGetElement('tabBtnBonus');
+    
+    if (tabBtnAdmin) {
+        tabBtnAdmin.addEventListener('click', () => showTab('admin'));
+    }
+    if (tabBtnBonus) {
+        tabBtnBonus.addEventListener('click', () => showTab('bonus'));
+    }
+}
 
 // ==================== FIREBASE INITIALIZATION ====================
 
@@ -311,7 +371,6 @@ async function initFirebase() {
         window.firebaseUpdate = update;
         window.firebaseOnValue = onValue;
 
-        console.log('Firebase initialized successfully');
         return true;
     } catch (error) {
         console.error('Firebase initialization error:', error);
@@ -324,8 +383,8 @@ async function initFirebase() {
 
 async function authenticate(k, silent = false) {
     if (!k || !window.db) return;
-    const loginBtn = document.getElementById('loginBtn');
-    if (!silent) setBtnLoading(loginBtn, true, 'Anmelden…', 'Anmelden');
+    const loginBtn = safeGetElement('loginBtn');
+    if (!silent && loginBtn) setBtnLoading(loginBtn, true, 'Anmelden…', 'Anmelden');
     
     try {
         const snap = await window.firebaseGet(window.firebaseRef(window.db, `keys/${k}`));
@@ -346,17 +405,25 @@ async function authenticate(k, silent = false) {
             }
             
             localStorage.setItem(config.SESSION_KEY, k);
-            document.getElementById('loginSection').classList.add('hidden');
-            document.getElementById('mainSection').classList.remove('hidden');
-            document.getElementById('userRole').textContent = currentRole;
-            document.getElementById('userNameLabel').textContent = currentUserData.name || k;
+            
+            const loginSection = safeGetElement('loginSection');
+            const mainSection = safeGetElement('mainSection');
+            const userRole = safeGetElement('userRole');
+            const userNameLabel = safeGetElement('userNameLabel');
+            
+            if (loginSection) loginSection.classList.add('hidden');
+            if (mainSection) mainSection.classList.remove('hidden');
+            if (userRole) userRole.textContent = currentRole;
+            if (userNameLabel) userNameLabel.textContent = currentUserData.name || k;
 
+            const tabBtnAdmin = safeGetElement('tabBtnAdmin');
+            const tabBar = safeGetElement('tabBar');
+            
             if (['admin', 'owner'].includes(currentRole)) {
-                document.getElementById('tabBtnAdmin').classList.remove('hidden');
-                document.getElementById('tabBtnExport').classList.remove('hidden');
+                if (tabBtnAdmin) tabBtnAdmin.classList.remove('hidden');
                 showTab('admin');
             } else {
-                document.getElementById('tabBar').classList.add('hidden');
+                if (tabBar) tabBar.classList.add('hidden');
                 showTab('bonus');
             }
 
@@ -369,7 +436,7 @@ async function authenticate(k, silent = false) {
         if (!silent) showToast('Authentifizierungsfehler', 'error');
         localStorage.removeItem(config.SESSION_KEY);
     } finally {
-        if (!silent) setBtnLoading(loginBtn, false, '', 'Anmelden');
+        if (!silent && loginBtn) setBtnLoading(loginBtn, false, '', 'Anmelden');
     }
 }
 
@@ -382,6 +449,12 @@ async function initApp() {
         return;
     }
     
+    // Initialize UI components
+    initModalHandlers();
+    initImageModal();
+    initPanelToggles();
+    initTabs();
+    
     const k = localStorage.getItem(config.SESSION_KEY);
     if (k) {
         await authenticate(k, true);
@@ -393,63 +466,102 @@ async function initApp() {
 
 // ==================== EVENT LISTENERS ====================
 
-document.getElementById('loginBtn').addEventListener('click', () => {
-    authenticate(document.getElementById('keyInput').value.trim());
-});
-
-document.getElementById('keyInput').addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') authenticate(document.getElementById('keyInput').value.trim());
-});
-
-document.getElementById('logoutBtn').addEventListener('click', () => {
-    localStorage.removeItem(config.SESSION_KEY);
-    location.reload();
-});
-
-document.getElementById('linkToRegister').addEventListener('click', () => {
-    document.getElementById('authPanelLogin').classList.add('hidden');
-    document.getElementById('authPanelRegister').classList.remove('hidden');
-});
-
-document.getElementById('linkToLogin').addEventListener('click', () => {
-    document.getElementById('authPanelRegister').classList.add('hidden');
-    document.getElementById('authPanelLogin').classList.remove('hidden');
-});
-
-const registerBtn = document.getElementById('registerBtn');
-registerBtn.addEventListener('click', async () => {
-    const n = document.getElementById('regName').value.trim();
-    const dc = document.getElementById('regDiscord').value.trim();
-    const i = document.getElementById('regId').value.trim();
-    const dept = document.getElementById('regDept').value.trim();
-
-    if (!n) return showToast('Bitte deinen Ingame-Namen eingeben', 'error');
-    if (!dc) return showToast('Bitte deinen Discord-Namen eingeben', 'error');
-    if (!i) return showToast('Bitte eine Spieler-ID eingeben', 'error');
-    if (!dept) return showToast('Bitte deine Abteilung eingeben', 'error');
-
-    setBtnLoading(registerBtn, true, 'Wird gesendet…', 'Antrag absenden');
-
-    try {
-        const messageText = `${dc} | ${n} | ${i} | ${dept}`;
-        await fetch(config.DISCORD_WEBHOOK, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ content: messageText })
+function initEventListeners() {
+    // Login/Logout
+    const loginBtn = safeGetElement('loginBtn');
+    const keyInput = safeGetElement('keyInput');
+    const logoutBtn = safeGetElement('logoutBtn');
+    const linkToRegister = safeGetElement('linkToRegister');
+    const linkToLogin = safeGetElement('linkToLogin');
+    
+    if (loginBtn) {
+        loginBtn.addEventListener('click', () => {
+            const input = safeGetElement('keyInput');
+            if (input) authenticate(input.value.trim());
         });
-        showToast('Antrag wurde gesendet!');
-        document.getElementById('regName').value = '';
-        document.getElementById('regDiscord').value = '';
-        document.getElementById('regId').value = '';
-        document.getElementById('regDept').value = '';
-        document.getElementById('authPanelRegister').classList.add('hidden');
-        document.getElementById('authPanelLogin').classList.remove('hidden');
-    } catch (e) {
-        showToast('Fehler beim Senden', 'error');
-    } finally {
-        setBtnLoading(registerBtn, false, '', 'Antrag absenden');
     }
-});
+    
+    if (keyInput) {
+        keyInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                const input = safeGetElement('keyInput');
+                if (input) authenticate(input.value.trim());
+            }
+        });
+    }
+    
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', () => {
+            localStorage.removeItem(config.SESSION_KEY);
+            location.reload();
+        });
+    }
+    
+    if (linkToRegister) {
+        linkToRegister.addEventListener('click', () => {
+            const authPanelLogin = safeGetElement('authPanelLogin');
+            const authPanelRegister = safeGetElement('authPanelRegister');
+            if (authPanelLogin) authPanelLogin.classList.add('hidden');
+            if (authPanelRegister) authPanelRegister.classList.remove('hidden');
+        });
+    }
+    
+    if (linkToLogin) {
+        linkToLogin.addEventListener('click', () => {
+            const authPanelRegister = safeGetElement('authPanelRegister');
+            const authPanelLogin = safeGetElement('authPanelLogin');
+            if (authPanelRegister) authPanelRegister.classList.add('hidden');
+            if (authPanelLogin) authPanelLogin.classList.remove('hidden');
+        });
+    }
+    
+    // Register
+    const registerBtn = safeGetElement('registerBtn');
+    if (registerBtn) {
+        registerBtn.addEventListener('click', async () => {
+            const n = safeGetElement('regName')?.value.trim() || '';
+            const dc = safeGetElement('regDiscord')?.value.trim() || '';
+            const i = safeGetElement('regId')?.value.trim() || '';
+            const dept = safeGetElement('regDept')?.value.trim() || '';
+
+            if (!n) return showToast('Bitte deinen Ingame-Namen eingeben', 'error');
+            if (!dc) return showToast('Bitte deinen Discord-Namen eingeben', 'error');
+            if (!i) return showToast('Bitte eine Spieler-ID eingeben', 'error');
+            if (!dept) return showToast('Bitte deine Abteilung eingeben', 'error');
+
+            setBtnLoading(registerBtn, true, 'Wird gesendet…', 'Antrag absenden');
+
+            try {
+                const messageText = `${dc} | ${n} | ${i} | ${dept}`;
+                await fetch(config.DISCORD_WEBHOOK, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ content: messageText })
+                });
+                showToast('Antrag wurde gesendet!');
+                
+                const regName = safeGetElement('regName');
+                const regDiscord = safeGetElement('regDiscord');
+                const regId = safeGetElement('regId');
+                const regDept = safeGetElement('regDept');
+                
+                if (regName) regName.value = '';
+                if (regDiscord) regDiscord.value = '';
+                if (regId) regId.value = '';
+                if (regDept) regDept.value = '';
+                
+                const authPanelRegister = safeGetElement('authPanelRegister');
+                const authPanelLogin = safeGetElement('authPanelLogin');
+                if (authPanelRegister) authPanelRegister.classList.add('hidden');
+                if (authPanelLogin) authPanelLogin.classList.remove('hidden');
+            } catch (e) {
+                showToast('Fehler beim Senden', 'error');
+            } finally {
+                setBtnLoading(registerBtn, false, '', 'Antrag absenden');
+            }
+        });
+    }
+}
 
 // ==================== DATA STREAM ====================
 
@@ -466,7 +578,8 @@ function initDataStream() {
         // Fix: Update current user data if keys change
         if (currentUserKey && keysData[currentUserKey]) {
             currentUserData = keysData[currentUserKey];
-            document.getElementById('userNameLabel').textContent = currentUserData.name || currentUserKey;
+            const userNameLabel = safeGetElement('userNameLabel');
+            if (userNameLabel) userNameLabel.textContent = currentUserData.name || currentUserKey;
         }
     });
 }
@@ -480,13 +593,16 @@ function renderAll() {
 }
 
 function updateFilterDropdown() {
-    const c = DOM.userFilter.value;
+    const userFilter = safeGetElement('userFilter');
+    if (!userFilter) return;
+    
+    const c = userFilter.value;
     const u = [...new Set(Object.values(entriesData).map(i => i.name).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'de'));
     const newHtml = '<option value="all">-- Alle anzeigen --</option>' + 
         u.map(x => `<option value="${escapeHtml(x)}"${x === c ? ' selected' : ''}>${escapeHtml(x)}</option>`).join('');
-    if (DOM.userFilter.innerHTML !== newHtml) {
-        DOM.userFilter.innerHTML = newHtml;
-        initCustomSelect(DOM.userFilter);
+    if (userFilter.innerHTML !== newHtml) {
+        userFilter.innerHTML = newHtml;
+        initCustomSelect(userFilter);
     }
 }
 
@@ -537,9 +653,13 @@ function buildCard(i, isAdmin) {
 }
 
 function getFilteredEntries() {
-    const userF = DOM.userFilter.value || 'all';
-    const statusF = DOM.statusFilter.value || 'all';
-    const q = (DOM.entrySearch.value || '').trim().toLowerCase();
+    const userFilter = safeGetElement('userFilter');
+    const statusFilter = safeGetElement('statusFilter');
+    const entrySearch = safeGetElement('entrySearch');
+    
+    const userF = userFilter?.value || 'all';
+    const statusF = statusFilter?.value || 'all';
+    const q = (entrySearch?.value || '').trim().toLowerCase();
 
     let it = Object.entries(entriesData).map(([id, d]) => ({ id, ...d }));
     
@@ -563,10 +683,15 @@ function getFilteredEntries() {
 function renderEntries() {
     let it = getFilteredEntries();
     it.sort((a, b) => parseGermanDate(b.date) - parseGermanDate(a.date));
-    document.getElementById('entriesCountPill').textContent = it.length;
-    const listEl = document.getElementById('entriesList');
-    listEl.innerHTML = it.length ? it.map(x => buildCard(x, true)).join('') : '<p class="empty-state">Keine Einträge gefunden.</p>';
-    attachImageClicks(listEl);
+    
+    const entriesCountPill = safeGetElement('entriesCountPill');
+    if (entriesCountPill) entriesCountPill.textContent = it.length;
+    
+    const listEl = safeGetElement('entriesList');
+    if (listEl) {
+        listEl.innerHTML = it.length ? it.map(x => buildCard(x, true)).join('') : '<p class="empty-state">Keine Einträge gefunden.</p>';
+        attachImageClicks(listEl);
+    }
 }
 
 function renderMyEntries() {
@@ -588,10 +713,15 @@ function renderMyEntries() {
     });
     
     it.sort((a, b) => parseGermanDate(b.date) - parseGermanDate(a.date));
-    document.getElementById('myEntriesCountPill').textContent = it.length;
-    const listEl = document.getElementById('myEntriesList');
-    listEl.innerHTML = n ? (it.length ? it.map(x => buildCard(x, false)).join('') : '<p class="empty-state">Noch keine Einreichungen vorhanden.</p>') : '<p class="empty-state">Kein Name gefunden.</p>';
-    attachImageClicks(listEl);
+    
+    const myEntriesCountPill = safeGetElement('myEntriesCountPill');
+    if (myEntriesCountPill) myEntriesCountPill.textContent = it.length;
+    
+    const listEl = safeGetElement('myEntriesList');
+    if (listEl) {
+        listEl.innerHTML = n ? (it.length ? it.map(x => buildCard(x, false)).join('') : '<p class="empty-state">Noch keine Einreichungen vorhanden.</p>') : '<p class="empty-state">Kein Name gefunden.</p>';
+        attachImageClicks(listEl);
+    }
 }
 
 function getSortedSummaryRows() {
@@ -640,45 +770,65 @@ function getSortedSummaryRows() {
 
 function renderSummary() {
     const rows = getSortedSummaryRows();
-    const rs = rows.map(r => `<tr>
-        <td>${escapeHtml(r.name)}</td>
-        <td>${escapeHtml(r.dateRaw.split(',')[0] || '–')}</td>
-        <td>${escapeHtml(r.activityLabel)}</td>
-        <td>$${r.amount.toLocaleString('de-DE')}</td>
-        <td>${escapeHtml(statusLabel(r.status)[1])}</td>
-    </tr>`).join('');
-    document.getElementById('adminSummaryBody').innerHTML = rs || '<tr><td colspan="5" style="color:var(--muted)">Keine Daten</td></tr>';
+    const adminSummaryBody = safeGetElement('adminSummaryBody');
+    
+    if (adminSummaryBody) {
+        const rs = rows.map(r => `<tr>
+            <td>${escapeHtml(r.name)}</td>
+            <td>${escapeHtml(r.dateRaw.split(',')[0] || '–')}</td>
+            <td>${escapeHtml(r.activityLabel)}</td>
+            <td>$${r.amount.toLocaleString('de-DE')}</td>
+            <td>${escapeHtml(statusLabel(r.status)[1])}</td>
+        </tr>`).join('');
+        adminSummaryBody.innerHTML = rs || '<tr><td colspan="5" style="color:var(--muted)">Keine Daten</td></tr>';
+    }
     updateSortArrows();
 }
 
 function updateSortArrows() {
     document.querySelectorAll('.sort-arrow').forEach(el => el.textContent = '');
-    const arrowEl = document.getElementById(`sortArrow-${sortState.col}`);
+    const arrowEl = safeGetElement(`sortArrow-${sortState.col}`);
     if (arrowEl) arrowEl.textContent = sortState.dir === 'asc' ? '▲' : '▼';
 }
 
-document.querySelectorAll('.summary-table th[data-sort]').forEach(th => {
-    th.addEventListener('click', () => {
-        const col = th.dataset.sort;
-        if (sortState.col === col) {
-            sortState.dir = sortState.dir === 'asc' ? 'desc' : 'asc';
-        } else {
-            sortState.col = col;
-            sortState.dir = col === 'date' ? 'desc' : 'asc';
-        }
-        renderSummary();
+function initSortHandlers() {
+    document.querySelectorAll('.summary-table th[data-sort]').forEach(th => {
+        th.addEventListener('click', () => {
+            const col = th.dataset.sort;
+            if (sortState.col === col) {
+                sortState.dir = sortState.dir === 'asc' ? 'desc' : 'asc';
+            } else {
+                sortState.col = col;
+                sortState.dir = col === 'date' ? 'desc' : 'asc';
+            }
+            renderSummary();
+        });
     });
-});
+}
 
-DOM.userFilter.addEventListener('change', renderEntries);
-DOM.statusFilter.addEventListener('change', renderEntries);
-initCustomSelect(DOM.statusFilter);
-
-let searchDebounce;
-DOM.entrySearch.addEventListener('input', () => {
-    clearTimeout(searchDebounce);
-    searchDebounce = setTimeout(renderEntries, 150);
-});
+function initFilterHandlers() {
+    const userFilter = safeGetElement('userFilter');
+    const statusFilter = safeGetElement('statusFilter');
+    const entrySearch = safeGetElement('entrySearch');
+    
+    if (userFilter) {
+        userFilter.addEventListener('change', renderEntries);
+        initCustomSelect(userFilter);
+    }
+    
+    if (statusFilter) {
+        statusFilter.addEventListener('change', renderEntries);
+        initCustomSelect(statusFilter);
+    }
+    
+    if (entrySearch) {
+        let searchDebounce;
+        entrySearch.addEventListener('input', () => {
+            clearTimeout(searchDebounce);
+            searchDebounce = setTimeout(renderEntries, 150);
+        });
+    }
+}
 
 // ==================== CAP UI ====================
 
@@ -694,93 +844,112 @@ function updateCapUI() {
     const t = userEntries.filter(i => i.status !== 'geschlossen').reduce((s, i) => s + parseAmount(i.activity), 0);
     const p = Math.min((t / config.PAYOUT_CAP) * 100, 100);
     
-    document.getElementById('capLabel').textContent = `$${t.toLocaleString('de-DE')} / $${config.PAYOUT_CAP.toLocaleString('de-DE')}`;
-    document.getElementById('capBarFill').style.width = `${p}%`;
-    document.getElementById('capBarFill').classList.toggle('full', t >= config.PAYOUT_CAP);
+    const capLabel = safeGetElement('capLabel');
+    const capBarFill = safeGetElement('capBarFill');
+    const capWarning = safeGetElement('capWarning');
+    
+    if (capLabel) capLabel.textContent = `$${t.toLocaleString('de-DE')} / $${config.PAYOUT_CAP.toLocaleString('de-DE')}`;
+    if (capBarFill) {
+        capBarFill.style.width = `${p}%`;
+        capBarFill.classList.toggle('full', t >= config.PAYOUT_CAP);
+    }
     const isCapped = t >= config.PAYOUT_CAP;
-    document.getElementById('capWarning').classList.toggle('hidden', !isCapped);
+    if (capWarning) capWarning.classList.toggle('hidden', !isCapped);
 
-    const uploadArea = document.getElementById('uploadFormArea');
-    if (isCapped) {
-        if (!uploadArea.dataset.cappedRendered) {
-            uploadArea.innerHTML = '<div class="cap-reached-notice"><strong>Cap erreicht</strong>Du hast dein Bonus-Limit von $200.000 erreicht. Warte, bis offene Einreichungen ausgezahlt wurden.</div>';
-            uploadArea.dataset.cappedRendered = '1';
-        }
-    } else if (uploadArea.dataset.cappedRendered) {
+    const uploadArea = safeGetElement('uploadFormArea');
+    if (isCapped && uploadArea && !uploadArea.dataset.cappedRendered) {
+        uploadArea.innerHTML = '<div class="cap-reached-notice"><strong>Cap erreicht</strong>Du hast dein Bonus-Limit von $200.000 erreicht. Warte, bis offene Einreichungen ausgezahlt wurden.</div>';
+        uploadArea.dataset.cappedRendered = '1';
+    } else if (uploadArea && uploadArea.dataset.cappedRendered) {
         location.reload();
     }
 }
 
 // ==================== ADMIN ACTIONS ====================
 
-document.addEventListener('click', async (e) => {
-    const btn = e.target.closest('button');
-    if (!btn) return;
-    const { action, id } = btn.dataset;
-    if (!action || !id) return;
+function initAdminActions() {
+    document.addEventListener('click', async (e) => {
+        const btn = e.target.closest('button');
+        if (!btn) return;
+        const { action, id } = btn.dataset;
+        if (!action || !id) return;
 
-    const originalHtml = btn.innerHTML;
-    try {
-        if (action === 'delete') {
-            if (confirm('Eintrag wirklich löschen?')) {
+        const originalHtml = btn.innerHTML;
+        try {
+            if (action === 'delete') {
+                if (confirm('Eintrag wirklich löschen?')) {
+                    btn.disabled = true;
+                    await window.firebaseRemove(window.firebaseRef(window.db, `uploads/${id}`));
+                    showToast('Eintrag gelöscht');
+                }
+            } else if (action === 'seen') {
                 btn.disabled = true;
-                await window.firebaseRemove(window.firebaseRef(window.db, `uploads/${id}`));
-                showToast('Eintrag gelöscht');
+                await window.firebaseUpdate(window.firebaseRef(window.db, `uploads/${id}`), { status: 'gesehen' });
+                showToast('Als gesehen markiert');
+            } else if (action === 'close') {
+                btn.disabled = true;
+                await window.firebaseUpdate(window.firebaseRef(window.db, `uploads/${id}`), { status: 'geschlossen' });
+                showToast('Als ausgezahlt markiert', 'success');
             }
-        } else if (action === 'seen') {
-            btn.disabled = true;
-            await window.firebaseUpdate(window.firebaseRef(window.db, `uploads/${id}`), { status: 'gesehen' });
-            showToast('Als gesehen markiert');
-        } else if (action === 'close') {
-            btn.disabled = true;
-            await window.firebaseUpdate(window.firebaseRef(window.db, `uploads/${id}`), { status: 'geschlossen' });
-            showToast('Als ausgezahlt markiert', 'success');
+        } catch (err) {
+            btn.disabled = false;
+            btn.innerHTML = originalHtml;
+            showToast('Fehler: ' + err.message, 'error');
         }
-    } catch (err) {
-        btn.disabled = false;
-        btn.innerHTML = originalHtml;
-        showToast('Fehler: ' + err.message, 'error');
-    }
-});
+    });
+}
 
 // ==================== FILE UPLOAD ====================
 
-const fileUploadTrigger = document.getElementById('fileUploadTrigger');
+function initFileUpload() {
+    const fileUploadTrigger = safeGetElement('fileUploadTrigger');
+    const fileUploadWrapper = safeGetElement('fileUploadWrapper');
+    const removeFileBtn = safeGetElement('removeFileBtn');
+    
+    if (!fileUploadTrigger || !fileUploadWrapper) return;
 
-document.getElementById('fileUploadWrapper').addEventListener('click', (e) => {
-    if (e.target.closest('#filePreviewContainer')) return;
-    DOM.fileInput.click();
-});
-
-['dragenter', 'dragover'].forEach(evt => {
-    fileUploadTrigger.addEventListener(evt, (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        fileUploadTrigger.classList.add('dragover');
+    fileUploadWrapper.addEventListener('click', (e) => {
+        if (e.target.closest('#filePreviewContainer')) return;
+        DOM.fileInput.click();
     });
-});
 
-['dragleave', 'drop'].forEach(evt => {
-    fileUploadTrigger.addEventListener(evt, (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        fileUploadTrigger.classList.remove('dragover');
+    ['dragenter', 'dragover'].forEach(evt => {
+        fileUploadTrigger.addEventListener(evt, (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            fileUploadTrigger.classList.add('dragover');
+        });
     });
-});
 
-fileUploadTrigger.addEventListener('drop', (e) => {
-    const f = e.dataTransfer.files && e.dataTransfer.files[0];
-    if (f) {
-        DOM.fileInput.files = e.dataTransfer.files;
-        handleSelectedFile(f);
+    ['dragleave', 'drop'].forEach(evt => {
+        fileUploadTrigger.addEventListener(evt, (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            fileUploadTrigger.classList.remove('dragover');
+        });
+    });
+
+    fileUploadTrigger.addEventListener('drop', (e) => {
+        const f = e.dataTransfer.files && e.dataTransfer.files[0];
+        if (f) {
+            DOM.fileInput.files = e.dataTransfer.files;
+            handleSelectedFile(f);
+        }
+    });
+
+    DOM.fileInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        handleSelectedFile(file);
+    });
+
+    if (removeFileBtn) {
+        removeFileBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            resetFileInput();
+        });
     }
-});
-
-DOM.fileInput.addEventListener('change', (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    handleSelectedFile(file);
-});
+}
 
 function handleSelectedFile(file) {
     if (!isValidImageFile(file)) {
@@ -800,17 +969,13 @@ function handleSelectedFile(file) {
         DOM.filePreviewImage.src = e.target.result;
         DOM.fileNameLabel.textContent = file.name;
         DOM.filePreviewContainer.classList.remove('hidden');
-        document.querySelector('.file-upload-trigger').classList.add('hidden');
+        const trigger = document.querySelector('.file-upload-trigger');
+        if (trigger) trigger.classList.add('hidden');
         setTimeout(openActivityModal, 300);
     };
     reader.onerror = () => showToast('Bild konnte nicht gelesen werden', 'error');
     reader.readAsDataURL(file);
 }
-
-document.getElementById('removeFileBtn').addEventListener('click', (e) => {
-    e.stopPropagation();
-    resetFileInput();
-});
 
 function resetFileInput() {
     DOM.fileInput.value = '';
@@ -875,39 +1040,43 @@ function openActivityModal() {
     openFormModal('Aktivität wählen', content, footer);
 
     let selectedValue = '';
-    const grid = document.getElementById('activityGrid');
-    const submitBtn = document.getElementById('modalSubmitBtn');
-    const searchInput = document.getElementById('activitySearchInput');
-    const clearBtn = document.getElementById('activitySearchClear');
-    const noResultsEl = document.getElementById('activityNoResults');
-    const countHintEl = document.getElementById('activityCountHint');
-    const cardEls = Array.from(grid.querySelectorAll('.activity-card'));
+    const grid = safeGetElement('activityGrid');
+    const submitBtn = safeGetElement('modalSubmitBtn');
+    const searchInput = safeGetElement('activitySearchInput');
+    const clearBtn = safeGetElement('activitySearchClear');
+    const noResultsEl = safeGetElement('activityNoResults');
+    const countHintEl = safeGetElement('activityCountHint');
+    const cardEls = grid ? Array.from(grid.querySelectorAll('.activity-card')) : [];
     const total = cardEls.length;
 
     function updateCountHint(visible) {
-        countHintEl.textContent = visible === total ? `${total} Aktivitäten` : `${visible} von ${total} Aktivitäten`;
+        if (countHintEl) countHintEl.textContent = visible === total ? `${total} Aktivitäten` : `${visible} von ${total} Aktivitäten`;
     }
-    updateCountHint(total);
+    if (countHintEl) updateCountHint(total);
 
-    grid.querySelectorAll('.activity-card').forEach(card => {
-        const select = () => {
-            grid.querySelectorAll('.activity-card.selected').forEach(c => c.classList.remove('selected'));
-            card.classList.add('selected');
-            selectedValue = card.dataset.value;
-            submitBtn.disabled = false;
-        };
-        card.addEventListener('click', select);
-        card.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                select();
-            }
+    if (grid) {
+        grid.querySelectorAll('.activity-card').forEach(card => {
+            const select = () => {
+                grid.querySelectorAll('.activity-card.selected').forEach(c => c.classList.remove('selected'));
+                card.classList.add('selected');
+                selectedValue = card.dataset.value;
+                if (submitBtn) submitBtn.disabled = false;
+            };
+            card.addEventListener('click', select);
+            card.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    select();
+                }
+            });
         });
-    });
+    }
 
     // Efficient filtering: only toggle visibility, no DOM rebuild
     let filterRaf = null;
     function filterActivities() {
+        if (!searchInput || !clearBtn || !noResultsEl) return;
+        
         const q = searchInput.value.toLowerCase().trim();
         clearBtn.classList.toggle('hidden', q === '');
         let visible = 0;
@@ -923,41 +1092,56 @@ function openActivityModal() {
         updateCountHint(visible);
     }
 
-    searchInput.addEventListener('input', () => {
-        if (filterRaf) cancelAnimationFrame(filterRaf);
-        filterRaf = requestAnimationFrame(filterActivities);
-    });
+    if (searchInput) {
+        searchInput.addEventListener('input', () => {
+            if (filterRaf) cancelAnimationFrame(filterRaf);
+            filterRaf = requestAnimationFrame(filterActivities);
+        });
+    }
 
-    clearBtn.addEventListener('click', () => {
-        searchInput.value = '';
-        filterActivities();
-        searchInput.focus();
-    });
-
-    searchInput.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') {
-            if (searchInput.value) {
+    if (clearBtn) {
+        clearBtn.addEventListener('click', () => {
+            if (searchInput) {
                 searchInput.value = '';
                 filterActivities();
-            } else {
-                searchInput.blur();
+                searchInput.focus();
             }
-        } else if (e.key === 'Enter') {
-            const firstVisible = cardEls.find(c => !c.classList.contains('hidden'));
-            if (firstVisible) firstVisible.click();
-        }
-    });
+        });
+    }
 
-    setTimeout(() => searchInput.focus(), 300);
+    if (searchInput) {
+        searchInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                if (searchInput.value) {
+                    searchInput.value = '';
+                    filterActivities();
+                } else {
+                    searchInput.blur();
+                }
+            } else if (e.key === 'Enter') {
+                const firstVisible = cardEls.find(c => !c.classList.contains('hidden'));
+                if (firstVisible) firstVisible.click();
+            }
+        });
+    }
 
-    document.getElementById('modalCancelSubmitBtn').addEventListener('click', () => {
-        closeFormModal();
-        resetFileInput();
-    });
+    setTimeout(() => {
+        if (searchInput) searchInput.focus();
+    }, 300);
 
-    submitBtn.addEventListener('click', async (ev) => {
-        if (selectedValue) await submitEntry(selectedValue, ev.currentTarget);
-    });
+    const modalCancelSubmitBtn = safeGetElement('modalCancelSubmitBtn');
+    if (modalCancelSubmitBtn) {
+        modalCancelSubmitBtn.addEventListener('click', () => {
+            closeFormModal();
+            resetFileInput();
+        });
+    }
+
+    if (submitBtn) {
+        submitBtn.addEventListener('click', async (ev) => {
+            if (selectedValue) await submitEntry(selectedValue, ev.currentTarget);
+        });
+    }
 }
 
 // ==================== SUBMIT ENTRY ====================
@@ -988,7 +1172,8 @@ async function submitEntry(activity, submitBtn) {
     }
 
     if (submitBtn) setBtnLoading(submitBtn, true, 'Wird gesendet…', 'Nachweis einreichen');
-    document.getElementById('loadingArea').classList.remove('hidden');
+    const loadingArea = safeGetElement('loadingArea');
+    if (loadingArea) loadingArea.classList.remove('hidden');
 
     try {
         const b = await fileToBase64(f);
@@ -1007,287 +1192,384 @@ async function submitEntry(activity, submitBtn) {
     } catch (e) {
         showToast('Upload fehlgeschlagen: ' + e.message, 'error');
     } finally {
-        document.getElementById('loadingArea').classList.add('hidden');
+        if (loadingArea) loadingArea.classList.add('hidden');
         if (submitBtn) setBtnLoading(submitBtn, false, '', 'Nachweis einreichen');
     }
 }
 
 // ==================== KEY GENERATOR ====================
 
-document.getElementById('openKeyGeneratorBtn').addEventListener('click', () => {
-    const content = `
-        <div class="form-group">
-            <label>Antrag aus Discord einfügen (Autofill)</label>
-            <input type="text" id="modalAutofillInput" placeholder="Discord | Ingame | ID | Abteilung" autocomplete="off">
-        </div>
-        <div class="divider"></div>
-        <div class="form-row">
+function initKeyGenerator() {
+    const openKeyGeneratorBtn = safeGetElement('openKeyGeneratorBtn');
+    if (!openKeyGeneratorBtn) return;
+    
+    openKeyGeneratorBtn.addEventListener('click', () => {
+        const content = `
             <div class="form-group">
-                <label>Spieler-ID</label>
-                <input type="number" id="modalKeyId" placeholder="z.B. 102476">
+                <label>Antrag aus Discord einfügen (Autofill)</label>
+                <input type="text" id="modalAutofillInput" placeholder="Discord | Ingame | ID | Abteilung" autocomplete="off">
+            </div>
+            <div class="divider"></div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Spieler-ID</label>
+                    <input type="number" id="modalKeyId" placeholder="z.B. 102476">
+                </div>
+                <div class="form-group">
+                    <label>Key Anfang</label>
+                    <input type="text" id="modalKeyPrefix" maxlength="2" placeholder="AA" value="AA">
+                </div>
             </div>
             <div class="form-group">
-                <label>Key Anfang</label>
-                <input type="text" id="modalKeyPrefix" maxlength="2" placeholder="AA" value="AA">
+                <label>Name</label>
+                <input type="text" id="modalKeyName" placeholder="Vollständiger Name">
             </div>
-        </div>
-        <div class="form-group">
-            <label>Name</label>
-            <input type="text" id="modalKeyName" placeholder="Vollständiger Name">
-        </div>
-        <div class="form-group">
-            <label>Abteilung</label>
-            <input type="text" id="modalKeyDept" placeholder="z.B. HRT">
-        </div>
-        <div class="form-group">
-            <label>Key Rang</label>
-            <select id="modalRoleSelect">
-                <option value="user">User</option>
-                <option value="admin">Admin</option>
-                <option value="owner">Owner</option>
-            </select>
-        </div>
-        <div class="form-group">
-            <label>Generierter Key</label>
-            <div class="readonly-key-row">
-                <input type="text" id="modalOutputKey" readonly placeholder="Key erscheint hier…">
-                <button type="button" class="btn-outline" id="modalCopyKeyBtn">Kopieren</button>
+            <div class="form-group">
+                <label>Abteilung</label>
+                <input type="text" id="modalKeyDept" placeholder="z.B. HRT">
             </div>
-        </div>
-    `;
-    const footer = `
-        <button id="modalGenerateKeyBtn">Key erstellen</button>
-        <button class="btn-outline" id="modalCloseKeyBtn">Schließen</button>
-    `;
-    openFormModal('Key Manager', content, footer);
-    initCustomSelect(document.getElementById('modalRoleSelect'));
+            <div class="form-group">
+                <label>Key Rang</label>
+                <select id="modalRoleSelect">
+                    <option value="user">User</option>
+                    <option value="admin">Admin</option>
+                    <option value="owner">Owner</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Generierter Key</label>
+                <div class="readonly-key-row">
+                    <input type="text" id="modalOutputKey" readonly placeholder="Key erscheint hier…">
+                    <button type="button" class="btn-outline" id="modalCopyKeyBtn">Kopieren</button>
+                </div>
+            </div>
+        `;
+        const footer = `
+            <button id="modalGenerateKeyBtn">Key erstellen</button>
+            <button class="btn-outline" id="modalCloseKeyBtn">Schließen</button>
+        `;
+        openFormModal('Key Manager', content, footer);
+        
+        const modalRoleSelect = safeGetElement('modalRoleSelect');
+        if (modalRoleSelect) initCustomSelect(modalRoleSelect);
 
-    document.getElementById('modalCloseKeyBtn').addEventListener('click', closeFormModal);
-
-    document.getElementById('modalCopyKeyBtn').addEventListener('click', async () => {
-        const val = document.getElementById('modalOutputKey').value;
-        if (!val) return showToast('Kein Key vorhanden', 'error');
-        const ok = await copyToClipboard(val);
-        showToast(ok ? 'Key kopiert!' : 'Kopieren fehlgeschlagen', ok ? 'success' : 'error');
-    });
-
-    document.getElementById('modalAutofillInput').addEventListener('input', (e) => {
-        const parts = e.target.value.split('|').map(s => s.trim());
-        if (parts.length >= 4) {
-            document.getElementById('modalKeyName').value = parts[1] || '';
-            document.getElementById('modalKeyId').value = parts[2] || '';
-            document.getElementById('modalKeyDept').value = parts[3] || '';
-            if (parts[1]) document.getElementById('modalKeyPrefix').value = derivePrefix(parts[1]);
+        const modalCloseKeyBtn = safeGetElement('modalCloseKeyBtn');
+        if (modalCloseKeyBtn) {
+            modalCloseKeyBtn.addEventListener('click', closeFormModal);
         }
-    });
 
-    document.getElementById('modalGenerateKeyBtn').addEventListener('click', async (ev) => {
-        const id = document.getElementById('modalKeyId').value.trim();
-        const nm = document.getElementById('modalKeyName').value.trim();
-        const dp = document.getElementById('modalKeyDept').value.trim();
-        const rl = document.getElementById('modalRoleSelect').value;
-        const pr = (document.getElementById('modalKeyPrefix').value || 'AA').toUpperCase().substring(0, 2);
-
-        if (!id || !nm) return showToast('ID und Name sind Pflichtfelder', 'error');
-
-        const k = `${pr}_${generateSecureRandomString(16)}`;
-        const genBtn = ev.currentTarget;
-        setBtnLoading(genBtn, true, 'Wird erstellt…', 'Key erstellen');
-        try {
-            await window.firebaseSet(window.firebaseRef(window.db, `keys/${k}`), {
-                id, name: nm, role: rl, department: dp
+        const modalCopyKeyBtn = safeGetElement('modalCopyKeyBtn');
+        if (modalCopyKeyBtn) {
+            modalCopyKeyBtn.addEventListener('click', async () => {
+                const modalOutputKey = safeGetElement('modalOutputKey');
+                const val = modalOutputKey?.value;
+                if (!val) return showToast('Kein Key vorhanden', 'error');
+                const ok = await copyToClipboard(val);
+                showToast(ok ? 'Key kopiert!' : 'Kopieren fehlgeschlagen', ok ? 'success' : 'error');
             });
-            document.getElementById('modalOutputKey').value = k;
-            showToast(`Key erstellt!`, 'success');
-        } catch (e) {
-            showToast('Fehler: ' + e.message, 'error');
-        } finally {
-            setBtnLoading(genBtn, false, '', 'Key erstellen');
+        }
+
+        const modalAutofillInput = safeGetElement('modalAutofillInput');
+        if (modalAutofillInput) {
+            modalAutofillInput.addEventListener('input', (e) => {
+                const parts = e.target.value.split('|').map(s => s.trim());
+                if (parts.length >= 4) {
+                    const modalKeyName = safeGetElement('modalKeyName');
+                    const modalKeyId = safeGetElement('modalKeyId');
+                    const modalKeyDept = safeGetElement('modalKeyDept');
+                    const modalKeyPrefix = safeGetElement('modalKeyPrefix');
+                    
+                    if (modalKeyName) modalKeyName.value = parts[1] || '';
+                    if (modalKeyId) modalKeyId.value = parts[2] || '';
+                    if (modalKeyDept) modalKeyDept.value = parts[3] || '';
+                    if (modalKeyPrefix && parts[1]) modalKeyPrefix.value = derivePrefix(parts[1]);
+                }
+            });
+        }
+
+        const modalGenerateKeyBtn = safeGetElement('modalGenerateKeyBtn');
+        if (modalGenerateKeyBtn) {
+            modalGenerateKeyBtn.addEventListener('click', async (ev) => {
+                const modalKeyId = safeGetElement('modalKeyId');
+                const modalKeyName = safeGetElement('modalKeyName');
+                const modalKeyDept = safeGetElement('modalKeyDept');
+                const modalRoleSelect = safeGetElement('modalRoleSelect');
+                const modalKeyPrefix = safeGetElement('modalKeyPrefix');
+                
+                const id = modalKeyId?.value.trim() || '';
+                const nm = modalKeyName?.value.trim() || '';
+                const dp = modalKeyDept?.value.trim() || '';
+                const rl = modalRoleSelect?.value || 'user';
+                const pr = (modalKeyPrefix?.value || 'AA').toUpperCase().substring(0, 2);
+
+                if (!id || !nm) return showToast('ID und Name sind Pflichtfelder', 'error');
+
+                const k = `${pr}_${generateSecureRandomString(16)}`;
+                setBtnLoading(modalGenerateKeyBtn, true, 'Wird erstellt…', 'Key erstellen');
+                try {
+                    await window.firebaseSet(window.firebaseRef(window.db, `keys/${k}`), {
+                        id, name: nm, role: rl, department: dp
+                    });
+                    const modalOutputKey = safeGetElement('modalOutputKey');
+                    if (modalOutputKey) modalOutputKey.value = k;
+                    showToast(`Key erstellt!`, 'success');
+                } catch (e) {
+                    showToast('Fehler: ' + e.message, 'error');
+                } finally {
+                    setBtnLoading(modalGenerateKeyBtn, false, '', 'Key erstellen');
+                }
+            });
         }
     });
-});
+}
 
 // ==================== CODE GENERATOR ====================
 
-document.getElementById('openCodeGeneratorBtn').addEventListener('click', () => {
-    const users = Object.entries(keysData).map(([k, v]) => ({ key: k, name: v.name || k, id: v.id || '0' }))
-        .sort((a, b) => a.name.localeCompare(b.name, 'de'));
-    const userOptions = users.map(u => `<option value="${escapeHtml(u.key)}">${escapeHtml(u.name)} (ID: ${escapeHtml(u.id)})</option>`).join('');
+function initCodeGenerator() {
+    const openCodeGeneratorBtn = safeGetElement('openCodeGeneratorBtn');
+    if (!openCodeGeneratorBtn) return;
+    
+    openCodeGeneratorBtn.addEventListener('click', () => {
+        const users = Object.entries(keysData).map(([k, v]) => ({ key: k, name: v.name || k, id: v.id || '0' }))
+            .sort((a, b) => a.name.localeCompare(b.name, 'de'));
+        const userOptions = users.map(u => `<option value="${escapeHtml(u.key)}">${escapeHtml(u.name)} (ID: ${escapeHtml(u.id)})</option>`).join('');
 
-    const content = `
-        <div class="form-group">
-            <label>User auswählen</label>
-            <select id="modalCodeUserSelect">
-                <option value="">-- User wählen --</option>
-                ${userOptions}
-            </select>
-        </div>
-        <div class="form-group">
-            <label>Generierte Codes</label>
-            <textarea id="modalOutputCodes" class="code-output" readonly placeholder="Codes erscheinen hier…"></textarea>
-        </div>
-    `;
-    const footer = `
-        <button id="modalGenerateCodeBtn">Code generieren</button>
-        <button class="btn-outline" id="modalGenerateAllCodesBtn">Alle Codes</button>
-        <button class="btn-outline" id="modalCopyCodesBtn">Kopieren</button>
-        <button class="btn-outline" id="modalCloseCodesBtn">Schließen</button>
-    `;
-    openFormModal('Auszahlungs Codes', content, footer);
-    initCustomSelect(document.getElementById('modalCodeUserSelect'));
-
-    document.getElementById('modalCloseCodesBtn').addEventListener('click', closeFormModal);
-
-    document.getElementById('modalCopyCodesBtn').addEventListener('click', async () => {
-        const val = document.getElementById('modalOutputCodes').value;
-        if (!val) return showToast('Keine Codes vorhanden', 'error');
-        const ok = await copyToClipboard(val);
-        showToast(ok ? 'Kopiert!' : 'Kopieren fehlgeschlagen', ok ? 'success' : 'error');
-    });
-
-    document.getElementById('modalGenerateCodeBtn').addEventListener('click', () => {
-        const k = document.getElementById('modalCodeUserSelect').value;
-        if (!k) return showToast('Bitte User wählen', 'error');
-        const ud = keysData[k];
-        if (!ud) return showToast('User nicht gefunden', 'error');
+        const content = `
+            <div class="form-group">
+                <label>User auswählen</label>
+                <select id="modalCodeUserSelect">
+                    <option value="">-- User wählen --</option>
+                    ${userOptions}
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Generierte Codes</label>
+                <textarea id="modalOutputCodes" class="code-output" readonly placeholder="Codes erscheinen hier…"></textarea>
+            </div>
+        `;
+        const footer = `
+            <button id="modalGenerateCodeBtn">Code generieren</button>
+            <button class="btn-outline" id="modalGenerateAllCodesBtn">Alle Codes</button>
+            <button class="btn-outline" id="modalCopyCodesBtn">Kopieren</button>
+            <button class="btn-outline" id="modalCloseCodesBtn">Schließen</button>
+        `;
+        openFormModal('Auszahlungs Codes', content, footer);
         
-        const userId = ud.id || '';
-        const userName = ud.name || k;
-        
-        // Get entries by name or playerId
-        const us = Object.values(entriesData).filter(x => 
-            x.name === userName || x.playerId === userId
-        );
-        const tm = us.filter(x => x.status !== 'geschlossen').reduce((s, x) => s + parseAmount(x.activity), 0);
-        
-        if (tm === 0) return showToast('Keine offenen Boni', 'error');
-        document.getElementById('modalOutputCodes').value = `${userId};${tm};HRTPrämie\n`;
-    });
+        const modalCodeUserSelect = safeGetElement('modalCodeUserSelect');
+        if (modalCodeUserSelect) initCustomSelect(modalCodeUserSelect);
 
-    document.getElementById('modalGenerateAllCodesBtn').addEventListener('click', () => {
-        let cd = '';
-        Object.values(keysData).forEach(ud => {
-            const userId = ud.id || '';
-            const userName = ud.name || '';
-            
-            // Get entries by name or playerId
-            const us = Object.values(entriesData).filter(x => 
-                x.name === userName || x.playerId === userId
-            );
-            const tm = us.filter(x => x.status !== 'geschlossen').reduce((s, x) => s + parseAmount(x.activity), 0);
-            if (tm > 0) cd += `${userId};${tm};HRTPrämie\n`;
-        });
-        document.getElementById('modalOutputCodes').value = cd || 'Keine offenen Boni gefunden.';
+        const modalCloseCodesBtn = safeGetElement('modalCloseCodesBtn');
+        if (modalCloseCodesBtn) {
+            modalCloseCodesBtn.addEventListener('click', closeFormModal);
+        }
+
+        const modalCopyCodesBtn = safeGetElement('modalCopyCodesBtn');
+        if (modalCopyCodesBtn) {
+            modalCopyCodesBtn.addEventListener('click', async () => {
+                const modalOutputCodes = safeGetElement('modalOutputCodes');
+                const val = modalOutputCodes?.value;
+                if (!val) return showToast('Keine Codes vorhanden', 'error');
+                const ok = await copyToClipboard(val);
+                showToast(ok ? 'Kopiert!' : 'Kopieren fehlgeschlagen', ok ? 'success' : 'error');
+            });
+        }
+
+        const modalGenerateCodeBtn = safeGetElement('modalGenerateCodeBtn');
+        if (modalGenerateCodeBtn) {
+            modalGenerateCodeBtn.addEventListener('click', () => {
+                const modalCodeUserSelect = safeGetElement('modalCodeUserSelect');
+                const k = modalCodeUserSelect?.value;
+                if (!k) return showToast('Bitte User wählen', 'error');
+                const ud = keysData[k];
+                if (!ud) return showToast('User nicht gefunden', 'error');
+                
+                const userId = ud.id || '';
+                const userName = ud.name || k;
+                
+                // Get entries by name or playerId
+                const us = Object.values(entriesData).filter(x => 
+                    x.name === userName || x.playerId === userId
+                );
+                const tm = us.filter(x => x.status !== 'geschlossen').reduce((s, x) => s + parseAmount(x.activity), 0);
+                
+                if (tm === 0) return showToast('Keine offenen Boni', 'error');
+                const modalOutputCodes = safeGetElement('modalOutputCodes');
+                if (modalOutputCodes) modalOutputCodes.value = `${userId};${tm};HRTPrämie\n`;
+            });
+        }
+
+        const modalGenerateAllCodesBtn = safeGetElement('modalGenerateAllCodesBtn');
+        if (modalGenerateAllCodesBtn) {
+            modalGenerateAllCodesBtn.addEventListener('click', () => {
+                let cd = '';
+                Object.values(keysData).forEach(ud => {
+                    const userId = ud.id || '';
+                    const userName = ud.name || '';
+                    
+                    // Get entries by name or playerId
+                    const us = Object.values(entriesData).filter(x => 
+                        x.name === userName || x.playerId === userId
+                    );
+                    const tm = us.filter(x => x.status !== 'geschlossen').reduce((s, x) => s + parseAmount(x.activity), 0);
+                    if (tm > 0) cd += `${userId};${tm};HRTPrämie\n`;
+                });
+                const modalOutputCodes = safeGetElement('modalOutputCodes');
+                if (modalOutputCodes) modalOutputCodes.value = cd || 'Keine offenen Boni gefunden.';
+            });
+        }
     });
-});
+}
 
 // ==================== BONUS LIST GENERATOR ====================
 
-document.getElementById('openBonusListBtn').addEventListener('click', () => {
-    const users = {};
-    Object.values(entriesData).forEach(e => {
-        if (e.status === 'offen' || e.status === 'gesehen') {
-            // Use name or try to find by playerId
-            let name = e.name || 'Unbekannt';
-            if (e.playerId) {
-                const matchingKey = Object.values(keysData).find(k => k.id === e.playerId);
-                if (matchingKey && matchingKey.name) {
-                    name = matchingKey.name;
+function initBonusListGenerator() {
+    const openBonusListBtn = safeGetElement('openBonusListBtn');
+    if (!openBonusListBtn) return;
+    
+    openBonusListBtn.addEventListener('click', () => {
+        const users = {};
+        Object.values(entriesData).forEach(e => {
+            if (e.status === 'offen' || e.status === 'gesehen') {
+                // Use name or try to find by playerId
+                let name = e.name || 'Unbekannt';
+                if (e.playerId) {
+                    const matchingKey = Object.values(keysData).find(k => k.id === e.playerId);
+                    if (matchingKey && matchingKey.name) {
+                        name = matchingKey.name;
+                    }
                 }
+                users[name] = (users[name] || 0) + parseAmount(e.activity);
             }
-            users[name] = (users[name] || 0) + parseAmount(e.activity);
+        });
+
+        let listText = "Bonusliste \n\n";
+        let total = 0;
+        Object.keys(users).sort((a, b) => a.localeCompare(b, 'de')).forEach(n => {
+            listText += `- **${n}**: $${users[n].toLocaleString('de-DE')}\n`;
+            total += users[n];
+        });
+        listText += `\n**Gesamtsumme: $${total.toLocaleString('de-DE')}**`;
+
+        const content = `
+            <div class="form-group">
+                <label>Discord Liste</label>
+                <textarea id="modalOutputBonusList" class="code-output" style="min-height:250px;" readonly>${escapeHtml(listText)}</textarea>
+            </div>
+        `;
+        const footer = `
+            <button id="modalCopyBonusBtn">Kopieren</button>
+            <button class="btn-outline" id="modalCloseBonusBtn">Schließen</button>
+        `;
+        openFormModal('Boni Liste', content, footer);
+        
+        const modalCloseBonusBtn = safeGetElement('modalCloseBonusBtn');
+        if (modalCloseBonusBtn) {
+            modalCloseBonusBtn.addEventListener('click', closeFormModal);
+        }
+        
+        const modalCopyBonusBtn = safeGetElement('modalCopyBonusBtn');
+        if (modalCopyBonusBtn) {
+            modalCopyBonusBtn.addEventListener('click', async () => {
+                const ok = await copyToClipboard(listText);
+                showToast(ok ? 'Kopiert!' : 'Kopieren fehlgeschlagen', ok ? 'success' : 'error');
+            });
         }
     });
-
-    let listText = "Bonusliste \n\n";
-    let total = 0;
-    Object.keys(users).sort((a, b) => a.localeCompare(b, 'de')).forEach(n => {
-        listText += `- **${n}**: $${users[n].toLocaleString('de-DE')}\n`;
-        total += users[n];
-    });
-    listText += `\n**Gesamtsumme: $${total.toLocaleString('de-DE')}**`;
-
-    const content = `
-        <div class="form-group">
-            <label>Discord Liste</label>
-            <textarea id="modalOutputBonusList" class="code-output" style="min-height:250px;" readonly>${escapeHtml(listText)}</textarea>
-        </div>
-    `;
-    const footer = `
-        <button id="modalCopyBonusBtn">Kopieren</button>
-        <button class="btn-outline" id="modalCloseBonusBtn">Schließen</button>
-    `;
-    openFormModal('Boni Liste', content, footer);
-    document.getElementById('modalCloseBonusBtn').addEventListener('click', closeFormModal);
-    document.getElementById('modalCopyBonusBtn').addEventListener('click', async () => {
-        const ok = await copyToClipboard(listText);
-        showToast(ok ? 'Kopiert!' : 'Kopieren fehlgeschlagen', ok ? 'success' : 'error');
-    });
-});
+}
 
 // ==================== DELETE ALL ====================
 
-document.getElementById('deleteAllBtn').addEventListener('click', async () => {
-    if (confirm('Wirklich ALLE Einsendungen löschen?')) {
-        const btn = document.getElementById('deleteAllBtn');
-        setBtnLoading(btn, true, 'Wird gelöscht…', 'Alle Einsendungen löschen');
-        try {
-            await window.firebaseSet(window.firebaseRef(window.db, 'uploads'), null);
-            showToast('Gelöscht');
-        } catch (e) {
-            showToast('Fehler: ' + e.message, 'error');
-        } finally {
-            setBtnLoading(btn, false, '', 'Alle Einsendungen löschen');
+function initDeleteAll() {
+    const deleteAllBtn = safeGetElement('deleteAllBtn');
+    if (!deleteAllBtn) return;
+    
+    deleteAllBtn.addEventListener('click', async () => {
+        if (confirm('Wirklich ALLE Einsendungen löschen?')) {
+            setBtnLoading(deleteAllBtn, true, 'Wird gelöscht…', 'Alle Einsendungen löschen');
+            try {
+                await window.firebaseSet(window.firebaseRef(window.db, 'uploads'), null);
+                showToast('Gelöscht');
+            } catch (e) {
+                showToast('Fehler: ' + e.message, 'error');
+            } finally {
+                setBtnLoading(deleteAllBtn, false, '', 'Alle Einsendungen löschen');
+            }
         }
-    }
-});
+    });
+}
 
 // ==================== EXPORT ====================
 
-document.getElementById('exportBtn').addEventListener('click', async () => {
-    const loading = document.getElementById('exportLoadingArea');
-    const exportBtn = document.getElementById('exportBtn');
-    loading.classList.remove('hidden');
-    exportBtn.disabled = true;
+function initExport() {
+    const exportBtn = safeGetElement('exportBtn');
+    if (!exportBtn) return;
+    
+    exportBtn.addEventListener('click', async () => {
+        const loading = safeGetElement('exportLoadingArea');
+        if (loading) loading.classList.remove('hidden');
+        exportBtn.disabled = true;
 
-    try {
-        const zip = new JSZip();
-        Object.entries(entriesData).forEach(([id, entry]) => {
-            if (!entry.image || !entry.name) return;
-            let safeName = String(entry.name).replace(/[\\/:*?"<>|]/g, '_');
-            
-            // Try to get better name from playerId
-            if (entry.playerId) {
-                const matchingKey = Object.values(keysData).find(k => k.id === entry.playerId);
-                if (matchingKey && matchingKey.name) {
-                    safeName = String(matchingKey.name).replace(/[\\/:*?"<>|]/g, '_');
+        try {
+            const zip = new JSZip();
+            Object.entries(entriesData).forEach(([id, entry]) => {
+                if (!entry.image || !entry.name) return;
+                let safeName = String(entry.name).replace(/[\\/:*?"<>|]/g, '_');
+                
+                // Try to get better name from playerId
+                if (entry.playerId) {
+                    const matchingKey = Object.values(keysData).find(k => k.id === entry.playerId);
+                    if (matchingKey && matchingKey.name) {
+                        safeName = String(matchingKey.name).replace(/[\\/:*?"<>|]/g, '_');
+                    }
                 }
-            }
-            
-            const folder = zip.folder(safeName);
-            const imgData = entry.image.split(',')[1];
-            if (imgData) folder.file(`${id}.png`, imgData, { base64: true });
-        });
+                
+                const folder = zip.folder(safeName);
+                const imgData = entry.image.split(',')[1];
+                if (imgData) folder.file(`${id}.png`, imgData, { base64: true });
+            });
 
-        const blob = await zip.generateAsync({ type: "blob" });
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `HRT_Export_${new Date().toLocaleDateString('de-DE').replace(/\./g, '-')}.zip`;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        setTimeout(() => window.URL.revokeObjectURL(url), 1000);
-        showToast('Export erfolgreich!');
-    } catch (e) {
-        showToast('Fehler: ' + e.message, 'error');
-    } finally {
-        loading.classList.add('hidden');
-        exportBtn.disabled = false;
-    }
-});
+            const blob = await zip.generateAsync({ type: "blob" });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `HRT_Export_${new Date().toLocaleDateString('de-DE').replace(/\./g, '-')}.zip`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            setTimeout(() => window.URL.revokeObjectURL(url), 1000);
+            showToast('Export erfolgreich!');
+        } catch (e) {
+            showToast('Fehler: ' + e.message, 'error');
+        } finally {
+            if (loading) loading.classList.add('hidden');
+            exportBtn.disabled = false;
+        }
+    });
+}
 
 // ==================== INITIALIZE APP ====================
+
+// Initialize all components when DOM is ready
+document.addEventListener('DOMContentLoaded', () => {
+    // Initialize UI components first
+    initModalHandlers();
+    initImageModal();
+    initPanelToggles();
+    initTabs();
+    initEventListeners();
+    initSortHandlers();
+    initFilterHandlers();
+    initAdminActions();
+    initFileUpload();
+    initKeyGenerator();
+    initCodeGenerator();
+    initBonusListGenerator();
+    initDeleteAll();
+    initExport();
+    
+    // Then initialize Firebase and app
+    initApp();
+});
 
 // Start the application
 initApp();
