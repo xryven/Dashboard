@@ -1,55 +1,766 @@
-/** HRT Dashboard - Premium Application (Compact Version) */
-const C={PAYOUT_CAP:200000,MAX_FILE_SIZE:20971520,VALID_IMAGE_TYPES:["image/jpeg","image/png","image/gif","image/webp"],SESSION_KEY:'hrt_session_key',DISCORD_WEBHOOK:'https://discord.com/api/webhooks/1523039203116711976/yrGIZBL_EvTIYhuWOXGZdRReVKjb10IFrcckMkOG4EVPSY3mZbwIwQB9XOUWocdJ0xgC',FIREBASE:{apiKey:'AIzaSyDUxM0DHEhQjtBsKOJWQNDmZrPEr-fqGLw',authDomain:'hrtbonusauszahlungen.firebaseapp.com',databaseURL:'https://hrtbonusauszahlungen-default-rtdb.europe-west1.firebasedatabase.app',projectId:'hrtbonusauszahlungen',storageBucket:'hrtbonusauszahlungen.firebasestorage.app',messagingSenderId:'77806251754',appId:'1:77806251754:web:56be35a7915de1ba69f193'}};
-const E={};
-const S={currentUser:{key:'',data:{},role:'user'},entries:{},keys:{},sort:{column:'date',direction:'desc'},filters:{user:'all',status:'all',search:''}};
-const escapeHtml=s=>String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#039;'})[m]);
-const getAcronym=t=>t.toLowerCase().replace(/[^a-zA-Z0-9\säöüß]/g,'').split(/\s+/).filter(Boolean).map(w=>w[0]).join('');
-const parseAmount=a=>a?(a.match(/([\d.]+)\$/)?parseInt(a.match(/([\d.]+)\$/)[1].replace(/\./g,''),10):0):0;
-const parseGermanDate=d=>{if(!d)return 0;const m=String(d).match(/(\d{1,2})\.(\d{1,2})\.(\d{4}),?\s*(\d{1,2}):(\d{2})(?::(\d{2}))?/);if(!m)return 0;return new Date(+m[3],+m[2]-1,+m[1],+m[4],+m[5],+(m[6]||0)).getTime();};
-const formatDate=d=>d?d.split(',')[0]||'–':'–';
-const splitActivityLabel=t=>{const m=t.match(/^(.*?)\s*\(([^)]+)\)\s*$/);return m?{name:m[1],price:m[2]}:{name:t,price:''}};
-const derivePrefix=n=>{const p=n.trim().split(/\s+/).filter(Boolean);if(!p.length)return'AA';if(p.length>=2)return(p[0][0]+p[1][0]).toUpperCase();return p[0].length>=2?p[0].substring(0,2).toUpperCase():(p[0][0]+p[0][0]).toUpperCase();};
-const generateSecureRandomString=n=>{const c='abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';const r=new Uint8Array(n);window.crypto.getRandomValues(r);return Array.from(r).map(v=>c[v%c.length]).join('');};
-const copyToClipboard=async t=>{if(!t)return false;try{return await navigator.clipboard.writeText(t);}catch{try{const ta=document.createElement('textarea');ta.value=t;ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);ta.focus();ta.select();const ok=document.execCommand('copy');document.body.removeChild(ta);return ok;}catch{return false;}}}
-const showToast=(m,t='success')=>{const e=document.getElementById('toast');const mi=document.querySelector('.toast-message');const ic=document.querySelector('.toast-icon');if(e&&mi&&ic){const icons={success:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>',error:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>',info:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>'};mi.textContent=m;ic.innerHTML=icons[t]||icons.success;e.className=`toast ${t}`;clearTimeout(showToast.t);showToast.t=setTimeout(()=>e.classList.remove('show'),3000);e.classList.add('show');}};
-const cacheElements=()=>{E.authSection=document.getElementById('authSection');E.mainSection=document.getElementById('mainSection');E.loginPanel=document.getElementById('loginPanel');E.registerPanel=document.getElementById('registerPanel');E.loginForm=document.getElementById('loginForm');E.registerForm=document.getElementById('registerForm');E.keyInput=document.getElementById('keyInput');E.loginBtn=document.getElementById('loginBtn');E.showRegister=document.getElementById('showRegister');E.showLogin=document.getElementById('showLogin');E.userRole=document.getElementById('userRole');E.userNameLabel=document.getElementById('userNameLabel');E.logoutBtn=document.getElementById('logoutBtn');E.appNav=document.getElementById('appNav');E.tabBtnBonus=document.getElementById('tabBtnBonus');E.tabBtnAdmin=document.getElementById('tabBtnAdmin');E.tabBonus=document.getElementById('tabBonus');E.tabAdmin=document.getElementById('tabAdmin');E.capLabel=document.getElementById('capLabel');E.capBarFill=document.getElementById('capBarFill');E.capWarning=document.getElementById('capWarning');E.uploadFormArea=document.getElementById('uploadFormArea');E.fileInput=document.getElementById('fileInput');E.fileUploadWrapper=document.getElementById('fileUploadWrapper');E.filePreviewContainer=document.getElementById('filePreviewContainer');E.filePreviewImage=document.getElementById('filePreviewImage');E.fileNameLabel=document.getElementById('fileNameLabel');E.removeFileBtn=document.getElementById('removeFileBtn');E.loadingArea=document.getElementById('loadingArea');E.entriesList=document.getElementById('entriesList');E.myEntriesList=document.getElementById('myEntriesList');E.entriesCountPill=document.getElementById('entriesCountPill');E.myEntriesCountPill=document.getElementById('myEntriesCountPill');E.adminSummaryBody=document.getElementById('adminSummaryBody');E.userFilter=document.getElementById('userFilter');E.statusFilter=document.getElementById('statusFilter');E.entrySearch=document.getElementById('entrySearch');E.activitySelect=document.getElementById('activitySelect');E.toast=document.getElementById('toast');E.toastMessage=document.querySelector('.toast-message');E.toastIcon=document.querySelector('.toast-icon');E.imageModal=document.getElementById('imageModal');E.modalImg=document.getElementById('modalImg');E.modalClose=document.getElementById('modalClose');E.formModal=document.getElementById('formModal');E.formModalOverlay=document.getElementById('formModalOverlay');E.formModalTitle=document.getElementById('formModalTitle');E.formModalBody=document.getElementById('formModalBody');E.formModalFooter=document.getElementById('formModalFooter');E.formModalClose=document.getElementById('formModalClose');E.openKeyGeneratorBtn=document.getElementById('openKeyGeneratorBtn');E.openCodeGeneratorBtn=document.getElementById('openCodeGeneratorBtn');E.openBonusListBtn=document.getElementById('openBonusListBtn');E.exportBtn=document.getElementById('exportBtn');E.deleteAllBtn=document.getElementById('deleteAllBtn');};
-const closeFormModal=()=>{if(E.formModal)E.formModal.classList.remove('active');if(E.formModalOverlay)E.formModalOverlay.classList.remove('active');};
-const openFormModal=(t,c,f)=>{if(E.formModalTitle&&E.formModalBody&&E.formModalFooter){E.formModalTitle.textContent=t;E.formModalBody.innerHTML=c;E.formModalFooter.innerHTML=f;if(E.formModal)E.formModal.classList.add('active');if(E.formModalOverlay)E.formModalOverlay.classList.add('active');const fi=E.formModalBody.querySelector('input,textarea,select');if(fi)setTimeout(()=>fi.focus(),100);}};
-const closeImageModal=()=>{if(E.imageModal)E.imageModal.classList.remove('active');if(E.modalImg)E.modalImg.src='';};
-const openImageModal=s=>{if(E.imageModal&&E.modalImg){E.modalImg.src=s;E.imageModal.classList.add('active');}};
-const attachImageClicks=(c=document)=>{c.querySelectorAll('.entry-thumb').forEach(i=>{if(i._h)return;i._h=1;i.addEventListener('click',e=>{e.preventDefault();openImageModal(i.dataset.full||i.src);});});};
-const showTab=t=>{if(E.tabBonus)E.tabBonus.classList.toggle('active',t==='bonus');if(E.tabAdmin)E.tabAdmin.classList.toggle('active',t==='admin');document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));if(t==='bonus'&&E.tabBtnBonus)E.tabBtnBonus.classList.add('active');if(t==='admin'&&E.tabBtnAdmin)E.tabBtnAdmin.classList.add('active');};
-const getStatusLabel=s=>({offen:{c:'open',t:'Offen'},gesehen:{c:'seen',t:'Gesehen'},geschlossen:{c:'closed',t:'Ausgezahlt'}}[s]||{c:'open',t:'Offen'});
-const buildEntryCard=(e,a)=>{const st=getStatusLabel(e.status);const ic=e.status==='geschlossen';let dn=e.name||'–';if(e.playerId&&S.keys[e.playerId]?.name)dn=S.keys[e.playerId].name;const aa=a?`<div class="admin-actions"><button class="btn btn-sm" data-action="seen" data-id="${escapeHtml(e.id)}" ${e.status==='gesehen'||ic?'disabled':''}>Gesehen</button><button class="btn btn-sm" data-action="close" data-id="${escapeHtml(e.id)}" ${ic?'disabled':''}>Bezahlt</button><button class="btn btn-sm" data-action="delete" data-id="${escapeHtml(e.id)}">Löschen</button></div>`:'';const ih=e.image?`<img class="entry-thumb" loading="lazy" src="${escapeHtml(e.image)}" data-full="${escapeHtml(e.image)}" alt="Nachweis">`:`<div class="entry-thumb placeholder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg><span>Kein Bild</span></div>`;return`<div class="entry-card" data-id="${escapeHtml(e.id)}"><span class="badge ${st.c}">${st.t}</span><div class="entry-content"><div class="entry-info"><p><strong>Name:</strong> ${escapeHtml(dn)}</p><p><strong>Aktivität:</strong> ${escapeHtml(e.activity||'–')}</p><p><strong>Datum:</strong> ${escapeHtml(formatDate(e.date))}</p>${aa}</div>${ih}</div></div>`;};
-const getFilteredEntries=()=>{const{u,s,q}=S.filters;let e=Object.entries(S.entries).map(([i,d])=>({i,...d}));e=e.map(en=>{if(en.playerId&&S.keys[en.playerId]?.name)return{...en,name:S.keys[en.playerId].name};return en;});if(u!=='all')e=e.filter(x=>x.name===u);if(s!=='all')e=e.filter(x=>(x.status||'offen')===s);if(q){const ql=q.toLowerCase();e=e.filter(x=>(x.name||'').toLowerCase().includes(ql)||(x.activity||'').toLowerCase().includes(ql));}return e;};
-const renderEntries=()=>{if(!E.entriesList)return;let e=getFilteredEntries();e.sort((a,b)=>parseGermanDate(b.date)-parseGermanDate(a.date));if(E.entriesCountPill)E.entriesCountPill.textContent=e.length;const a=['admin','owner'].includes(S.currentUser.role);const h=e.length>0?e.map(en=>buildEntryCard(en,a)).join(''):'<p class="empty-state">Keine Einträge gefunden.</p>';E.entriesList.innerHTML=h;attachImageClicks(E.entriesList);};
-const renderMyEntries=()=>{if(!E.myEntriesList)return;const n=S.currentUser.data.name||'';const u=S.currentUser.data.id||'';let e=Object.entries(S.entries).map(([i,d])=>({i,...d})).filter(x=>x.name===n||x.playerId===u);e=e.map(en=>{if(en.playerId&&!en.name&&S.keys[en.playerId]?.name)return{...en,name:S.keys[en.playerId].name};return en;});e.sort((a,b)=>parseGermanDate(b.date)-parseGermanDate(a.date));if(E.myEntriesCountPill)E.myEntriesCountPill.textContent=e.length;const h=n&&e.length>0?e.map(en=>buildEntryCard(en,false)).join(''):'<p class="empty-state">Noch keine Einreichungen vorhanden.</p>';E.myEntriesList.innerHTML=h;attachImageClicks(E.myEntriesList);};
-const getSortedSummaryRows=()=>{const r=Object.entries(S.entries).map(([i,d])=>({i,name:d.name||'–',dateRaw:d.date||'',dateSort:parseGermanDate(d.date),activityLabel:(d.activity||'').split('(')[0].trim()||'–',amount:parseAmount(d.activity),status:d.status||'offen'}));const mr=r.map(row=>{if(row.name==='–'&&row.i&&S.entries[row.i]?.playerId){const k=Object.values(S.keys).find(x=>x.id===S.entries[row.i].playerId);if(k?.name)return{...row,name:k.name};}return row;});const{c,d}=S.sort;const m=d==='asc'?1:-1;mr.sort((a,b)=>{let av,bv;switch(c){case'name':av=a.name.toLowerCase();bv=b.name.toLowerCase();break;case'activity':av=a.activityLabel.toLowerCase();bv=b.activityLabel.toLowerCase();break;case'amount':av=a.amount;bv=b.amount;break;case'status':av=a.status;bv=b.status;break;case'date':default:av=a.dateSort;bv=b.dateSort;break;}if(av<bv)return-1*m;if(av>bv)return 1*m;return 0;});return mr;};
-const renderSummary=()=>{if(!E.adminSummaryBody)return;const r=getSortedSummaryRows();const tr=r.map(row=>`<tr><td>${escapeHtml(row.name)}</td><td>${escapeHtml(formatDate(row.dateRaw))}</td><td>${escapeHtml(row.activityLabel)}</td><td>$${row.amount.toLocaleString('de-DE')}</td><td><span class="badge ${getStatusLabel(row.status).c}">${getStatusLabel(row.status).t}</span></td></tr>`).join('');E.adminSummaryBody.innerHTML=tr.length>0?tr:'<tr><td colspan="5" class="empty-state">Keine Daten verfügbar</td></tr>';document.querySelectorAll('.sort-arrow').forEach(el=>el.textContent='');const ae=document.getElementById(`sortArrow-${S.sort.column}`);if(ae)ae.textContent=S.sort.direction==='asc'?'▲':'▼';};
-const updateCapUI=()=>{if(!E.capLabel||!E.capBarFill)return;const n=S.currentUser.data.name||'';const u=S.currentUser.data.id||'';const ue=Object.values(S.entries).filter(e=>e.name===n||e.playerId===u);const t=ue.filter(e=>e.status!=='geschlossen').reduce((s,e)=>s+parseAmount(e.activity),0);const p=Math.min((t/C.PAYOUT_CAP)*100,100);E.capLabel.textContent=`$${t.toLocaleString('de-DE')}`;E.capBarFill.style.width=`${p}%`;const ic=t>=C.PAYOUT_CAP;if(E.capWarning)E.capWarning.classList.toggle('hidden',!ic);if(ic&&E.uploadFormArea&&!E.uploadFormArea.dataset.capped){E.uploadFormArea.innerHTML=`<div class="cap-reached"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><p>Cap von $200.000 erreicht!</p><span>Warte, bis offene Einreichungen ausgezahlt wurden.</span></div>`;E.uploadFormArea.dataset.capped='true';}else if(E.uploadFormArea&&E.uploadFormArea.dataset.capped)location.reload();};
-const updateFilterDropdown=()=>{if(!E.userFilter)return;const c=E.userFilter.value;const u=[...new Set(Object.values(S.entries).map(e=>e.name).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'de'));const o=['<option value="all">Alle anzeigen</option>'];u.forEach(x=>o.push(`<option value="${escapeHtml(x)}"${x===c?' selected':''}>${escapeHtml(x)}</option>`));if(E.userFilter.innerHTML!==o.join(''))E.userFilter.innerHTML=o.join('');};
-const handleSelectedFile=file=>{if(!file)return;if(!C.VALID_IMAGE_TYPES.includes(file.type)){showToast('Nur Bilddateien sind erlaubt','error');resetFileInput();return;}if(file.size>C.MAX_FILE_SIZE){showToast('Datei zu groß (max. 20MB)','error');resetFileInput();return;}const reader=new FileReader();reader.onload=e=>{if(E.filePreviewImage)E.filePreviewImage.src=e.target.result;if(E.fileNameLabel)E.fileNameLabel.textContent=file.name;if(E.filePreviewContainer)E.filePreviewContainer.classList.remove('hidden');if(E.fileUploadWrapper)E.fileUploadWrapper.classList.add('hidden');setTimeout(openActivityModal,300);};reader.onerror=()=>{showToast('Fehler beim Lesen der Datei','error');resetFileInput();};reader.readAsDataURL(file);};
-const resetFileInput=()=>{if(E.fileInput)E.fileInput.value='';if(E.filePreviewContainer)E.filePreviewContainer.classList.add('hidden');if(E.fileUploadWrapper)E.fileUploadWrapper.classList.remove('hidden');};
-const handleAdminAction=async(a,i,b)=>{if(!i||!b)return;const oh=b.innerHTML;b.disabled=true;try{const er=window.HRT.ref(window.HRT.db,`uploads/${i}`);switch(a){case'seen':await window.HRT.update(er,{status:'gesehen'});showToast('Als gesehen markiert','success');break;case'close':await window.HRT.update(er,{status:'geschlossen'});showToast('Als ausgezahlt markiert','success');break;case'delete':if(confirm('Eintrag wirklich löschen?')){await window.HRT.remove(er);showToast('Eintrag gelöscht','success');}break;}}catch(e){b.disabled=false;b.innerHTML=oh;showToast('Fehler: '+e.message,'error');}};
-const submitEntry=async(a,s)=>{const n=S.currentUser.data.name||'';const u=S.currentUser.data.id||'';const f=E.fileInput?.files[0];if(!n){showToast('Kein Name gefunden','error');return;}if(!f){showToast('Bitte ein Bild auswählen','error');return;}const ue=Object.values(S.entries).filter(e=>e.name===n||e.playerId===u);const cc=ue.filter(e=>e.status!=='geschlossen').reduce((s,e)=>s+parseAmount(e.activity),0);if(cc>=C.PAYOUT_CAP){showToast('Cap erreicht!','error');return;}let fa=a;const ea=parseAmount(a);if(cc+ea>C.PAYOUT_CAP){const aa=C.PAYOUT_CAP-cc;const{name}=splitActivityLabel(a);fa=`${name} (${aa.toLocaleString('de-DE')}$)`;showToast(`Auf $${aa.toLocaleString('de-DE')} gekürzt`,'info');}if(s){s.classList.add('loading');s.disabled=true;}if(E.loadingArea)E.loadingArea.classList.remove('hidden');try{const b64=await new Promise((r,j)=>{const reader=new FileReader();reader.onload=()=>r(reader.result);reader.onerror=j;reader.readAsDataURL(f);});const nr=window.HRT.push(window.HRT.ref(window.HRT.db,'uploads'));await window.HRT.set(nr,{name:n,activity:fa,image:b64,date:new Date().toLocaleString('de-DE'),status:'offen',playerId:u});closeFormModal();resetFileInput();showToast('Nachweis erfolgreich eingereicht!','success');}catch(e){showToast('Fehler: '+e.message,'error');}finally{if(s){s.classList.remove('loading');s.disabled=false;}if(E.loadingArea)E.loadingArea.classList.add('hidden');}};
-let activityCardsCache=null;
-const getActivityCardsData=()=>{if(activityCardsCache)return activityCardsCache;if(!E.activitySelect)return[];activityCardsCache=Array.from(E.activitySelect.options).map(o=>{const{name,price}=splitActivityLabel(o.value);return{value:o.value,name,price,search:name.toLowerCase(),acronym:getAcronym(name)}});return activityCardsCache;};
-const openActivityModal=()=>{const cd=getActivityCardsData();const ch=cd.map(c=>`<button class="activity-card" data-value="${escapeHtml(c.value)}" data-search="${escapeHtml(c.search)}" data-acronym="${escapeHtml(c.acronym)}"><span class="activity-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></span><span class="activity-name">${escapeHtml(c.name)}</span><span class="activity-price">${escapeHtml(c.price)}</span></button>`).join('');const c=`<div class="modal-section"><div class="search-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input type="search" id="activitySearchInput" class="form-input" placeholder="Suche Aktivität..." autocomplete="off"><button id="activitySearchClear" class="search-clear" aria-label="Suche leeren"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg></button></div><p class="search-count" id="activityCountHint">${cd.length} Aktivitäten</p></div><div class="activity-grid" id="activityGrid">${ch}</div><p id="activityNoResults" class="empty-state hidden">Keine Treffer gefunden.</p>`;const f=`<button id="modalSubmitBtn" class="btn btn-primary" disabled><span class="btn-text">Nachweis einreichen</span><span class="btn-loader"></span></button><button id="modalCancelSubmitBtn" class="btn btn-ghost">Abbrechen</button>`;openFormModal('Aktivität auswählen',c,f);const g=document.getElementById('activityGrid');const sb=document.getElementById('modalSubmitBtn');const si=document.getElementById('activitySearchInput');const cb=document.getElementById('activitySearchClear');const ne=document.getElementById('activityNoResults');const ch2=document.getElementById('activityCountHint');if(!g||!sb)return;const ce=Array.from(g.querySelectorAll('.activity-card'));const t=ce.length;let sv='';const uc=visible=>{if(ch2)ch2.textContent=visible===t?`${t} Aktivitäten`: `${visible} von ${t} Aktivitäten`;};uc(t);ce.forEach(c=>{c.addEventListener('click',()=>{g.querySelectorAll('.activity-card').forEach(x=>x.classList.remove('selected'));c.classList.add('selected');sv=c.dataset.value;sb.disabled=false;});});let ft;const fa=()=>{if(!si||!cb||!ne)return;const q=si.value.toLowerCase().trim();cb.classList.toggle('hidden',q==='');let v=0;ce.forEach(c=>{const s=c.dataset.search;const a=c.dataset.acronym;const m=q===''||s.includes(q)||a.includes(q);if(m)v++;c.classList.toggle('hidden',!m);});ne.classList.toggle('hidden',v>0);uc(v);};if(si){si.addEventListener('input',()=>{clearTimeout(ft);ft=setTimeout(fa,100);});si.addEventListener('keydown',e=>{if(e.key==='Escape'){if(si.value){si.value='';fa();}else si.blur();}else if(e.key==='Enter'){const fv=ce.find(x=>!x.classList.contains('hidden'));if(fv)fv.click();}});}if(cb)cb.addEventListener('click',()=>{if(si){si.value='';fa();si.focus();}});const cbtn=document.getElementById('modalCancelSubmitBtn');if(cbtn)cbtn.addEventListener('click',()=>{closeFormModal();resetFileInput();});if(sb)sb.addEventListener('click',async()=>{if(sv)await submitEntry(sv,sb);});setTimeout(()=>{if(si)si.focus();},100);};
-const initKeyGenerator=()=>{const c=`<div class="modal-section"><div class="form-group"><label class="form-label">Antrag aus Discord (Autofill)</label><div class="input-wrapper"><svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><input type="text" id="modalAutofillInput" class="form-input" placeholder="Discord | Ingame | ID | Abteilung" autocomplete="off"></div></div></div><div class="divider"></div><div class="form-grid"><div class="form-group"><label class="form-label">Spieler-ID</label><div class="input-wrapper"><svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg><input type="number" id="modalKeyId" class="form-input" placeholder="z.B. 102476"></div></div><div class="form-group"><label class="form-label">Key Anfang</label><div class="input-wrapper"><svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg><input type="text" id="modalKeyPrefix" class="form-input" maxlength="2" placeholder="AA" value="AA"></div></div><div class="form-group"><label class="form-label">Name</label><div class="input-wrapper"><svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg><input type="text" id="modalKeyName" class="form-input" placeholder="Vollständiger Name"></div></div><div class="form-group"><label class="form-label">Abteilung</label><div class="input-wrapper"><svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg><input type="text" id="modalKeyDept" class="form-input" placeholder="z.B. HRT"></div></div><div class="form-group"><label class="form-label">Key Rang</label><select id="modalRoleSelect" class="form-select"><option value="user">User</option><option value="admin">Admin</option><option value="owner">Owner</option></select></div><div class="form-group"><label class="form-label">Generierter Key</label><div class="input-group"><input type="text" id="modalOutputKey" class="form-input" readonly placeholder="Key erscheint hier..."><button type="button" id="modalCopyKeyBtn" class="btn btn-ghost"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg><span>Kopieren</span></button></div></div></div>`;const f=`<button id="modalGenerateKeyBtn" class="btn btn-primary"><span class="btn-text">Key erstellen</span><span class="btn-loader"></span></button><button id="modalCloseKeyBtn" class="btn btn-ghost">Schließen</button>`;openFormModal('Key Manager',c,f);const mrs=document.getElementById('modalRoleSelect');const mck=document.getElementById('modalCloseKeyBtn');const mckb=document.getElementById('modalCopyKeyBtn');const maf=document.getElementById('modalAutofillInput');const mgk=document.getElementById('modalGenerateKeyBtn');if(mck)mck.addEventListener('click',closeFormModal);if(mckb)mckb.addEventListener('click',async()=>{const ki=document.getElementById('modalOutputKey');const k=ki?.value;if(!k){showToast('Kein Key vorhanden','error');return;}const s=await copyToClipboard(k);showToast(s?'Key kopiert!':'Kopieren fehlgeschlagen',s?'success':'error');});if(maf)maf.addEventListener('input',e=>{const p=e.target.value.split('|').map(s=>s.trim());if(p.length>=4){const ni=document.getElementById('modalKeyName');const ii=document.getElementById('modalKeyId');const di=document.getElementById('modalKeyDept');const pi=document.getElementById('modalKeyPrefix');if(ni)ni.value=p[1]||'';if(ii)ii.value=p[2]||'';if(di)di.value=p[3]||'';if(pi&&p[1])pi.value=derivePrefix(p[1]);}});if(mgk)mgk.addEventListener('click',async()=>{const i=document.getElementById('modalKeyId')?.value.trim()||'';const n=document.getElementById('modalKeyName')?.value.trim()||'';const d=document.getElementById('modalKeyDept')?.value.trim()||'';const r=document.getElementById('modalRoleSelect')?.value||'user';const p=(document.getElementById('modalKeyPrefix')?.value||'AA').toUpperCase().substring(0,2);if(!i||!n){showToast('ID und Name sind Pflichtfelder','error');return;}mgk.classList.add('loading');mgk.disabled=true;try{const k=`${p}_${generateSecureRandomString(16)}`;const kr=window.HRT.ref(window.HRT.db,`keys/${k}`);await window.HRT.set(kr,{id:i,name:n,role:r,department:d});const ok=document.getElementById('modalOutputKey');if(ok)ok.value=k;showToast('Key erfolgreich erstellt!','success');}catch(e){showToast('Fehler: '+e.message,'error');}finally{mgk.classList.remove('loading');mgk.disabled=false;}});};
-const initCodeGenerator=()=>{const u=Object.entries(S.keys).map(([k,d])=>({k,name:d.name||k,id:d.id||'0'})).sort((a,b)=>a.name.localeCompare(b.name,'de'));const uo=u.map(x=>`<option value="${escapeHtml(x.k)}">${escapeHtml(x.name)} (ID: ${escapeHtml(x.id)})</option>`).join('');const c=`<div class="modal-section"><div class="form-group"><label class="form-label">User auswählen</label><select id="modalCodeUserSelect" class="form-select"><option value="">-- User wählen --</option>${uo}</select></div><div class="form-group"><label class="form-label">Generierte Codes</label><textarea id="modalOutputCodes" class="form-textarea" readonly placeholder="Codes erscheinen hier..."></textarea></div></div>`;const f=`<button id="modalGenerateCodeBtn" class="btn btn-primary"><span class="btn-text">Code generieren</span><span class="btn-loader"></span></button><button id="modalGenerateAllCodesBtn" class="btn btn-ghost">Alle Codes</button><button id="modalCopyCodesBtn" class="btn btn-ghost">Kopieren</button><button id="modalCloseCodesBtn" class="btn btn-ghost">Schließen</button>`;openFormModal('Auszahlungs Codes',c,f);const mcs=document.getElementById('modalCodeUserSelect');const mccb=document.getElementById('modalCloseCodesBtn');const mccb2=document.getElementById('modalCopyCodesBtn');const mcgb=document.getElementById('modalGenerateCodeBtn');const mcab=document.getElementById('modalGenerateAllCodesBtn');if(mccb)mccb.addEventListener('click',closeFormModal);if(mccb2)mccb2.addEventListener('click',async()=>{const ci=document.getElementById('modalOutputCodes');const c=ci?.value;if(!c){showToast('Keine Codes vorhanden','error');return;}const s=await copyToClipboard(c);showToast(s?'Kopiert!':'Kopieren fehlgeschlagen',s?'success':'error');});if(mcgb)mcgb.addEventListener('click',()=>{const k=document.getElementById('modalCodeUserSelect')?.value;if(!k){showToast('Bitte User wählen','error');return;}const ud=S.keys[k];if(!ud){showToast('User nicht gefunden','error');return;}const ui=ud.id||'';const un=ud.name||k;const ue=Object.values(S.entries).filter(x=>x.name===un||x.playerId===ui);const ta=ue.filter(x=>x.status!=='geschlossen').reduce((s,x)=>s+parseAmount(x.activity),0);if(ta===0){showToast('Keine offenen Boni','error');return;}const ci=document.getElementById('modalOutputCodes');if(ci)ci.value=`${ui};${ta};HRTPrämie\n`;});if(mcab)mcab.addEventListener('click',()=>{let cd='';Object.values(S.keys).forEach(ud=>{const ui=ud.id||'';const un=ud.name||'';const ue=Object.values(S.entries).filter(x=>x.name===un||x.playerId===ui);const ta=ue.filter(x=>x.status!=='geschlossen').reduce((s,x)=>s+parseAmount(x.activity),0);if(ta>0)cd+=`${ui};${ta};HRTPrämie\n`;});const ci=document.getElementById('modalOutputCodes');if(ci)ci.value=cd||'Keine offenen Boni gefunden.';});};
-const initBonusListGenerator=()=>{const u={};Object.values(S.entries).forEach(e=>{if(e.status==='offen'||e.status==='gesehen'){let n=e.name||'Unbekannt';if(e.playerId){const k=Object.values(S.keys).find(x=>x.id===e.playerId);if(k?.name)n=k.name;}u[n]=(u[n]||0)+parseAmount(e.activity);}});let lt='Bonusliste \n\n';let t=0;Object.keys(u).sort((a,b)=>a.localeCompare(b,'de')).forEach(n=>{lt+=`- **${n}**: $${u[n].toLocaleString('de-DE')}\n`;t+=u[n];});lt+=`\n**Gesamtsumme: $${t.toLocaleString('de-DE')}**`;const c=`<div class="modal-section"><div class="form-group"><label class="form-label">Discord Liste</label><textarea id="modalOutputBonusList" class="form-textarea" style="min-height:250px;" readonly>${escapeHtml(lt)}</textarea></div></div>`;const f=`<button id="modalCopyBonusBtn" class="btn btn-primary"><span class="btn-text">Kopieren</span><span class="btn-loader"></span></button><button id="modalCloseBonusBtn" class="btn btn-ghost">Schließen</button>`;openFormModal('Boni Liste',c,f);const mcb=document.getElementById('modalCloseBonusBtn');const mcb2=document.getElementById('modalCopyBonusBtn');if(mcb)mcb.addEventListener('click',closeFormModal);if(mcb2)mcb2.addEventListener('click',async()=>{const s=await copyToClipboard(lt);showToast(s?'Kopiert!':'Kopieren fehlgeschlagen',s?'success':'error');});};
-const initExport=async()=>{if(!E.exportBtn)return;const l=document.getElementById('exportLoadingArea');if(l)l.classList.remove('hidden');E.exportBtn.disabled=true;try{const zip=new JSZip();Object.entries(S.entries).forEach(([i,e])=>{if(!e.image||!e.name)return;let sn=String(e.name).replace(/[\\/:*?"<>|]/g,'_');if(e.playerId){const k=Object.values(S.keys).find(x=>x.id===e.playerId);if(k?.name)sn=String(k.name).replace(/[\\/:*?"<>|]/g,'_');}const f=zip.folder(sn);const id=e.image.split(',')[1];if(id)f.file(`${i}.png`,id,{base64:true});});const blob=await zip.generateAsync({type:'blob'});const url=window.URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=`HRT_Export_${new Date().toLocaleDateString('de-DE').replace(/\./g,'-')}.zip`;document.body.appendChild(a);a.click();document.body.removeChild(a);setTimeout(()=>window.URL.revokeObjectURL(url),1000);showToast('Export erfolgreich!','success');}catch(e){showToast('Fehler beim Export: '+e.message,'error');}finally{if(l)l.classList.add('hidden');E.exportBtn.disabled=false;}};
-const initDeleteAll=async()=>{if(!E.deleteAllBtn)return;if(!confirm('Wirklich ALLE Einsendungen löschen?'))return;E.deleteAllBtn.classList.add('loading');E.deleteAllBtn.disabled=true;try{const ur=window.HRT.ref(window.HRT.db,'uploads');await window.HRT.set(ur,null);showToast('Alle Einsendungen gelöscht','success');}catch(e){showToast('Fehler beim Löschen: '+e.message,'error');}finally{E.deleteAllBtn.classList.remove('loading');E.deleteAllBtn.disabled=false;}};
-const handleRegister=async()=>{if(!E.registerForm)return;const ni=document.getElementById('regName');const di=document.getElementById('regDiscord');const ii=document.getElementById('regId');const de=document.getElementById('regDept');const sb=document.getElementById('registerBtn');const n=ni?.value.trim()||'';const d=di?.value.trim()||'';const i=ii?.value.trim()||'';const dp=de?.value.trim()||'';if(!n){showToast('Bitte deinen Ingame-Namen eingeben','error');return;}if(!d){showToast('Bitte deinen Discord-Namen eingeben','error');return;}if(!i){showToast('Bitte eine Spieler-ID eingeben','error');return;}if(!dp){showToast('Bitte deine Abteilung eingeben','error');return;}if(sb){sb.classList.add('loading');sb.disabled=true;}try{const mt=`${d} | ${n} | ${i} | ${dp}`;const r=await fetch(C.DISCORD_WEBHOOK,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({content:mt})});if(!r.ok)throw new Error('Webhook Fehler');showToast('Antrag erfolgreich gesendet!','success');if(ni)ni.value='';if(di)di.value='';if(ii)ii.value='';if(de)de.value='';if(E.registerPanel)E.registerPanel.classList.remove('active');if(E.loginPanel)E.loginPanel.classList.add('active');}catch(e){showToast('Fehler beim Senden: '+e.message,'error');}finally{if(sb){sb.classList.remove('loading');sb.disabled=false;}};};
-const initEventListeners=()=>{if(E.formModalClose)E.formModalClose.addEventListener('click',closeFormModal);if(E.formModalOverlay)E.formModalOverlay.addEventListener('click',closeFormModal);if(E.modalClose)E.modalClose.addEventListener('click',closeImageModal);document.addEventListener('keydown',e=>{if(e.key==='Escape'){if(E.formModal?.classList.contains('active'))closeFormModal();else if(E.imageModal?.classList.contains('active'))closeImageModal();}});if(E.showRegister)E.showRegister.addEventListener('click',()=>{if(E.loginPanel)E.loginPanel.classList.remove('active');if(E.registerPanel)E.registerPanel.classList.add('active');});if(E.showLogin)E.showLogin.addEventListener('click',()=>{if(E.registerPanel)E.registerPanel.classList.remove('active');if(E.loginPanel)E.loginPanel.classList.add('active');});if(E.loginForm)E.loginForm.addEventListener('submit',e=>{e.preventDefault();if(E.keyInput)authenticate(E.keyInput.value.trim());});if(E.loginBtn)E.loginBtn.addEventListener('click',()=>{if(E.keyInput)authenticate(E.keyInput.value.trim());});if(E.keyInput)E.keyInput.addEventListener('keydown',e=>{if(e.key==='Enter'&&E.keyInput)authenticate(E.keyInput.value.trim());});if(E.logoutBtn)E.logoutBtn.addEventListener('click',logout);if(E.registerForm)E.registerForm.addEventListener('submit',e=>{e.preventDefault();handleRegister();});if(E.tabBtnBonus)E.tabBtnBonus.addEventListener('click',()=>showTab('bonus'));if(E.tabBtnAdmin)E.tabBtnAdmin.addEventListener('click',()=>showTab('admin'));document.querySelectorAll('[data-toggle]').forEach(t=>{t.addEventListener('click',()=>{const p=document.getElementById(t.dataset.toggle);if(p)p.classList.toggle('open');});});document.querySelectorAll('.sort-arrow').forEach(a=>{const th=a.parentElement;if(th)th.addEventListener('click',()=>{const c=th.dataset.sort;if(S.sort.column===c)S.sort.direction=S.sort.direction==='asc'?'desc':'asc';else{S.sort.column=c;S.sort.direction=c==='date'?'desc':'asc';}renderSummary();});});if(E.userFilter)E.userFilter.addEventListener('change',e=>{S.filters.user=e.target.value;renderEntries();});if(E.statusFilter)E.statusFilter.addEventListener('change',e=>{S.filters.status=e.target.value;renderEntries();});if(E.entrySearch){let st;E.entrySearch.addEventListener('input',e=>{clearTimeout(st);st=setTimeout(()=>{S.filters.search=e.target.value;renderEntries();},300);});}if(E.fileUploadWrapper){E.fileUploadWrapper.addEventListener('click',e=>{if(e.target.closest('#filePreviewContainer'))return;if(E.fileInput)E.fileInput.click();});['dragenter','dragover'].forEach(ev=>{E.fileUploadWrapper.addEventListener(ev,e=>{e.preventDefault();e.stopPropagation();E.fileUploadWrapper.classList.add('dragover');});});['dragleave','drop'].forEach(ev=>{E.fileUploadWrapper.addEventListener(ev,e=>{e.preventDefault();e.stopPropagation();E.fileUploadWrapper.classList.remove('dragover');});});E.fileUploadWrapper.addEventListener('drop',e=>{const f=e.dataTransfer.files?.[0];if(f&&E.fileInput){E.fileInput.files=e.dataTransfer.files;handleSelectedFile(f);}});}if(E.fileInput)E.fileInput.addEventListener('change',e=>{const f=e.target.files?.[0];if(f)handleSelectedFile(f);});if(E.removeFileBtn)E.removeFileBtn.addEventListener('click',e=>{e.stopPropagation();resetFileInput();});document.addEventListener('click',e=>{const b=e.target.closest('[data-action]');if(!b)return;const a=b.dataset.action;const i=b.dataset.id;if(a&&i)handleAdminAction(a,i,b);});if(E.openKeyGeneratorBtn)E.openKeyGeneratorBtn.addEventListener('click',initKeyGenerator);if(E.openCodeGeneratorBtn)E.openCodeGeneratorBtn.addEventListener('click',initCodeGenerator);if(E.openBonusListBtn)E.openBonusListBtn.addEventListener('click',initBonusListGenerator);if(E.exportBtn)E.exportBtn.addEventListener('click',initExport);if(E.deleteAllBtn)E.deleteAllBtn.addEventListener('click',initDeleteAll);};
-const authenticate=async(k,s=false)=>{if(!k||!window.HRT?.db)return;if(!s&&E.loginBtn){E.loginBtn.classList.add('loading');E.loginBtn.disabled=true;}try{const kr=window.HRT.ref(window.HRT.db,`keys/${k}`);const snap=await window.HRT.get(kr);if(snap.exists()){const kd=snap.val();S.currentUser.data=typeof kd==='object'?kd:{role:kd,name:k,id:''};S.currentUser.key=k;S.currentUser.role=S.currentUser.data.role||'user';localStorage.setItem(C.SESSION_KEY,k);if(E.authSection)E.authSection.classList.add('hidden');if(E.mainSection)E.mainSection.classList.remove('hidden');if(E.userRole)E.userRole.textContent=S.currentUser.role;if(E.userNameLabel)E.userNameLabel.textContent=S.currentUser.data.name||k;if(['admin','owner'].includes(S.currentUser.role)){if(E.tabBtnAdmin)E.tabBtnAdmin.classList.remove('hidden');showTab('admin');initKeysStream();}else{if(E.tabBtnAdmin)E.tabBtnAdmin.classList.add('hidden');showTab('bonus');}initDataStream();if(!s)showToast('Erfolgreich angemeldet!','success');}else{if(!s)showToast('Ungültiger Access Key','error');localStorage.removeItem(C.SESSION_KEY);}}catch(e){if(!s)showToast('Authentifizierungsfehler','error');localStorage.removeItem(C.SESSION_KEY);}finally{if(!s&&E.loginBtn){E.loginBtn.classList.remove('loading');E.loginBtn.disabled=false;}}};
-const initDataStream=()=>{if(!window.HRT?.db)return;const er=window.HRT.ref(window.HRT.db,'uploads');window.HRT.onValue(er,snap=>{S.entries=snap.val()||{};renderAll();});};
-const initKeysStream=()=>{if(!window.HRT?.db||!['admin','owner'].includes(S.currentUser.role))return;const kr=window.HRT.ref(window.HRT.db,'keys');window.HRT.onValue(kr,snap=>{S.keys=snap.val()||{};if(S.currentUser.key&&S.keys[S.currentUser.key]){S.currentUser.data=S.keys[S.currentUser.key];if(E.userNameLabel)E.userNameLabel.textContent=S.currentUser.data.name||S.currentUser.key;}});};
-const renderAll=()=>{updateFilterDropdown();renderEntries();renderMyEntries();renderSummary();updateCapUI();};
-const logout=()=>{localStorage.removeItem(C.SESSION_KEY);S.currentUser={key:'',data:{},role:'user'};S.entries={};S.keys={};location.reload();};
-const initApp=async()=>{cacheElements();initEventListeners();const fr=await initFirebase();if(!fr){showToast('Firebase-Fehler','error');return;}const sk=localStorage.getItem(C.SESSION_KEY);if(sk)await authenticate(sk,true);const ls=document.getElementById('loadingScreen');if(ls){setTimeout(()=>{ls.classList.add('hidden');setTimeout(()=>ls.remove(),500);},1000);}};
-const initFirebase=async()=>{if(window.HRT?.db)return true;try{await new Promise(r=>{const c=setInterval(()=>{if(window.HRT?.db){clearInterval(c);r();}},100);setTimeout(()=>clearInterval(c),5000);});return true;}catch{showToast('Firebase-Fehler','error');return false;}};
-const initSecurity=()=>{document.addEventListener('contextmenu',e=>{if(e.target.tagName!=='INPUT'&&e.target.tagName!=='TEXTAREA')e.preventDefault();});document.addEventListener('keydown',e=>{[{key:'F12'},{ctrlKey:1,shiftKey:1,key:'I'},{ctrlKey:1,shiftKey:1,key:'J'},{ctrlKey:1,shiftKey:1,key:'C'},{ctrlKey:1,key:'u'},{ctrlKey:1,shiftKey:1,key:'K'}].some(c=>e.key===c.key&&(!c.ctrlKey||e.ctrlKey)&&(!c.shiftKey||e.shiftKey))&&e.preventDefault();});['log','warn','error','info','debug','trace','dir'].forEach(m=>console[m]=()=>{});};
-initSecurity();
-document.addEventListener('DOMContentLoaded',initApp);
-if(document.readyState!=='loading')initApp();
+// HRT Dashboard - Production Version with Correct Firebase Rules
+// ============================================================
+
+// CONFIGURATION - Directly embedded
+const config = {
+    PAYOUT_CAP: 200000,
+    MAX_FILE_SIZE: 20971520,
+    VALID_IMAGE_TYPES: ["image/jpeg", "image/png", "image/gif", "image/webp"],
+    SESSION_KEY: 'hrt_session_key',
+    DISCORD_WEBHOOK: "https://discord.com/api/webhooks/1523039203116711976/yrGIZBL_EvTIYhuWOXGZdRReVKjb10IFrcckMkOG4EVPSY3mZbwIwQB9XOUWocdJ0xgC",
+    FIREBASE_CONFIG: {
+        apiKey: "AIzaSyDUxM0DHEhQjtBsKOJWQNDmZrPEr-fqGLw",
+        authDomain: "hrtbonusauszahlungen.firebaseapp.com",
+        databaseURL: "https://hrtbonusauszahlungen-default-rtdb.europe-west1.firebasedatabase.app",
+        projectId: "hrtbonusauszahlungen",
+        storageBucket: "hrtbonusauszahlungen.firebasestorage.app",
+        messagingSenderId: "77806251754",
+        appId: "1:77806251754:web:56be35a7915de1ba69f193",
+        measurementId: "G-NJ5DTV2QK5"
+    }
+};
+
+// SECURITY: Block right-click and dev tools
+document.addEventListener('contextmenu', e => {
+    if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
+        e.preventDefault();
+    }
+});
+document.addEventListener('keydown', e => {
+    if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && ['I','J','C'].includes(e.key)) || (e.ctrlKey && e.key === 'u')) {
+        e.preventDefault();
+    }
+});
+console.log = console.warn = console.error = console.info = console.debug = console.trace = console.dir = () => {};
+
+// Global state
+let currentRole = "user", currentUserKey = "", currentUserData = {}, entriesData = {}, keysData = {};
+let sortState = { col: 'date', dir: 'desc' };
+
+// Safe element access
+const $ = id => document.getElementById(id);
+
+// Utility functions
+const escapeHtml = e => String(e).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#039;'})[m]);
+const getAcronym = text => text.toLowerCase().replace(/[^a-zA-Z0-9\säöüß]/g, '').split(/\s+/).filter(Boolean).map(w => w[0]).join('');
+const parseAmount = a => a ? (a.match(/([\d.]+)\$/)? parseInt(a.match(/([\d.]+)\$/)[1].replace(/\./g, ''), 10) : 0) : 0;
+const parseGermanDate = d => {
+    if (!d) return 0;
+    const m = String(d).match(/(\d{1,2})\.(\d{1,2})\.(\d{4}),?\s*(\d{1,2}):(\d{2})(?::(\d{2}))?/);
+    if (!m) return 0;
+    return new Date(+m[3], +m[2]-1, +m[1], +m[4], +m[5], +(m[6]||0)).getTime();
+};
+
+const showToast = (m, t='success') => {
+    const e = $('toast');
+    if (e) { e.textContent = m; e.className = `show ${t}`; clearTimeout(showToast._tm); showToast._tm = setTimeout(() => e.className = '', 3000); }
+};
+
+const setBtnLoading = (btn, loading, loadingLabel, normalLabel) => {
+    if (!btn) return; btn.disabled = loading; btn.innerHTML = loading ? `<span class="btn-loader"></span> ${escapeHtml(loadingLabel)}` : escapeHtml(normalLabel);
+};
+
+const copyToClipboard = async text => {
+    if (!text) return false;
+    try { return await navigator.clipboard.writeText(text); }
+    catch {
+        try {
+            const ta = document.createElement('textarea'); ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+            document.body.appendChild(ta); ta.focus(); ta.select(); const ok = document.execCommand('copy');
+            document.body.removeChild(ta); return ok;
+        } catch { return false; }
+    }
+};
+
+const derivePrefix = name => {
+    const parts = name.trim().split(/\s+/).filter(Boolean);
+    if (!parts.length) return 'AA';
+    if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+    return parts[0].length >= 2 ? parts[0].substring(0, 2).toUpperCase() : (parts[0][0] + parts[0][0]).toUpperCase();
+};
+
+const fileToBase64 = f => new Promise((r, j) => { const e = new FileReader(); e.onload = () => r(e.result); e.onerror = j; e.readAsDataURL(f); });
+const isValidImageFile = f => config.VALID_IMAGE_TYPES.includes(f.type);
+const generateSecureRandomString = n => {
+    const c = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    const r = new Uint8Array(n); window.crypto.getRandomValues(r);
+    let s = ''; for (let i = 0; i < n; i++) s += c[r[i] % c.length]; return s;
+};
+
+// Modal functions
+const openFormModal = (title, content, footer) => {
+    const titleEl = $('formModalTitle'), bodyEl = $('formModalBody'), footerEl = $('formModalFooter');
+    if (titleEl && bodyEl && footerEl) {
+        titleEl.textContent = title; bodyEl.innerHTML = content; footerEl.innerHTML = footer;
+        $('formModal')?.classList.add('active'); $('formModalOverlay')?.classList.add('active');
+    }
+};
+const closeFormModal = () => { $('formModal')?.classList.remove('active'); $('formModalOverlay')?.classList.remove('active'); };
+window.closeFormModal = closeFormModal;
+
+// Custom select
+const initCustomSelect = s => {
+    if (!s) return;
+    const existingWrapper = s.nextElementSibling;
+    if (existingWrapper?.classList.contains('custom-select-wrapper')) existingWrapper.remove();
+    const w = document.createElement('div'); w.className = 'custom-select-wrapper';
+    const t = document.createElement('div'); t.className = 'custom-select-trigger';
+    const labelSpan = document.createElement('span'); labelSpan.className = 'trigger-label';
+    labelSpan.textContent = s.options[s.selectedIndex]?.text || '–'; t.appendChild(labelSpan);
+    if (s.disabled) t.classList.add('disabled');
+    const o = document.createElement('div'); o.className = 'custom-options';
+    const b = () => {
+        o.innerHTML = '';
+        Array.from(s.options).forEach((opt, i) => {
+            const d = document.createElement('div'); d.className = 'custom-option' + (i === s.selectedIndex ? ' selected' : '');
+            d.textContent = opt.text; d.addEventListener('click', () => {
+                s.selectedIndex = i; labelSpan.textContent = opt.text;
+                o.querySelectorAll('.custom-option').forEach(x => x.classList.remove('selected'));
+                d.classList.add('selected'); w.classList.remove('open'); t.classList.remove('open');
+                s.dispatchEvent(new Event('change'));
+            }); o.appendChild(d);
+        });
+    };
+    b(); t.addEventListener('click', e => {
+        if (s.disabled) return; e.stopPropagation();
+        document.querySelectorAll('.custom-select-wrapper.open').forEach(x => { if (x !== w) { x.classList.remove('open'); x.querySelector('.custom-select-trigger')?.classList.remove('open'); } });
+        w.classList.toggle('open'); t.classList.toggle('open');
+    }); w.appendChild(t); w.appendChild(o); s.parentNode.insertBefore(w, s.nextSibling);
+    s._customSelectRefresh = b; s._customSelectLabel = labelSpan;
+};
+document.addEventListener('click', () => document.querySelectorAll('.custom-select-wrapper.open').forEach(w => { w.classList.remove('open'); w.querySelector('.custom-select-trigger')?.classList.remove('open'); }));
+
+// Image modal
+let openModal, closeModal;
+(() => {
+    const modal = $('imageModal'), modalImg = $('modalImg');
+    if (!modal || !modalImg) return;
+    openModal = s => { modalImg.src = s; modal.classList.add('active'); };
+    closeModal = () => { modal.classList.remove('active'); setTimeout(() => { if (!modal.classList.contains('active')) modalImg.src = ''; }, 350); };
+    $('modalClose')?.addEventListener('click', closeModal);
+    modal.addEventListener('click', e => { if (e.target === modal) closeModal(); });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+})();
+
+const attachImageClicks = (container) => {
+    (container || document).querySelectorAll('.entry-thumb').forEach(img => {
+        if (img._clickBound) return; img._clickBound = true;
+        img.addEventListener('click', e => { e.preventDefault(); if (openModal) openModal(img.dataset.full || img.src); });
+    });
+};
+
+// Panel toggles
+document.querySelectorAll('[data-toggle-parent]').forEach(h => h.addEventListener('click', () => h.closest('.panel')?.classList.toggle('open')));
+
+// Tab system
+const showTab = t => {
+    $('tabAdmin')?.classList.toggle('active', t === 'admin'); $('tabBonus')?.classList.toggle('active', t === 'bonus');
+    $('tabBtnAdmin')?.classList.toggle('active', t === 'admin'); $('tabBtnBonus')?.classList.toggle('active', t === 'bonus');
+};
+
+// Initialize Firebase
+let firebaseInitialized = false;
+async function initFirebase() {
+    if (firebaseInitialized) return true;
+    try {
+        const { initializeApp } = await import('https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js');
+        const { getDatabase, ref, get, set, push, remove, update, onValue } = await import('https://www.gstatic.com/firebasejs/12.15.0/firebase-database.js');
+        const app = initializeApp(config.FIREBASE_CONFIG); const db = getDatabase(app);
+        window.db = db; window.firebaseRef = ref; window.firebaseGet = get; window.firebaseSet = set;
+        window.firebasePush = push; window.firebaseRemove = remove; window.firebaseUpdate = update; window.firebaseOnValue = onValue;
+        firebaseInitialized = true;
+        return true;
+    } catch (error) { showToast('Firebase-Fehler', 'error'); return false; }
+}
+
+// Authentication - UPDATED FOR NEW RULES
+async function authenticate(k, silent = false) {
+    if (!k || !window.db) return;
+    const loginBtn = $('loginBtn'); if (!silent && loginBtn) setBtnLoading(loginBtn, true, 'Anmelden…', 'Anmelden');
+    try {
+        // Try to read the key - this will work for admins/owners, but we need a different approach for users
+        // Since users can't read keys, we need to verify the key exists by trying to authenticate with it
+        // For now, we'll use the old approach but with proper error handling
+        const snap = await window.firebaseGet(window.firebaseRef(window.db, `keys/${k}`));
+        if (snap.exists()) {
+            const v = snap.val(); currentUserData = typeof v === 'object' ? v : { role: v, name: k, id: '' };
+            currentRole = currentUserData.role || 'user'; currentUserKey = k;
+            if (currentUserData.id) {
+                const matchingKey = Object.entries(keysData || {}).find(([key, data]) => data.id === currentUserData.id && data.name !== currentUserData.name);
+                if (matchingKey) currentUserData.name = matchingKey[1].name || currentUserData.name;
+            }
+            localStorage.setItem(config.SESSION_KEY, k);
+            $('loginSection')?.classList.add('hidden'); $('mainSection')?.classList.remove('hidden');
+            $('userRole')?.textContent = currentRole; $('userNameLabel')?.textContent = currentUserData.name || k;
+            if (['admin', 'owner'].includes(currentRole)) { 
+                $('tabBtnAdmin')?.classList.remove('hidden'); 
+                showTab('admin'); 
+                // Load keys data for admins
+                initKeysStream();
+            } else { 
+                $('tabBar')?.classList.add('hidden'); 
+                showTab('bonus');
+            }
+            initDataStream();
+        } else {
+            if (!silent) showToast('Ungültiger Key', 'error');
+            localStorage.removeItem(config.SESSION_KEY);
+        }
+    } catch (e) {
+        if (!silent) showToast('Authentifizierungsfehler', 'error');
+        localStorage.removeItem(config.SESSION_KEY);
+    } finally { 
+        if (!silent && loginBtn) setBtnLoading(loginBtn, false, '', 'Anmelden'); 
+    }
+}
+
+// Data streams
+function initDataStream() {
+    if (!window.db) return;
+    window.firebaseOnValue(window.firebaseRef(window.db, 'uploads'), snap => { 
+        entriesData = snap.val() || {}; 
+        renderAll(); 
+    });
+}
+
+function initKeysStream() {
+    if (!window.db || !['admin', 'owner'].includes(currentRole)) return;
+    window.firebaseOnValue(window.firebaseRef(window.db, 'keys'), snap => {
+        keysData = snap.val() || {};
+        if (currentUserKey && keysData[currentUserKey]) { 
+            currentUserData = keysData[currentUserKey]; 
+            $('userNameLabel')?.textContent = currentUserData.name || currentUserKey; 
+        }
+    });
+}
+
+// Render functions
+function renderAll() { 
+    updateFilterDropdown(); 
+    renderEntries(); 
+    renderMyEntries(); 
+    renderSummary(); 
+    updateCapUI(); 
+}
+
+function updateFilterDropdown() {
+    const userFilter = $('userFilter'); 
+    if (!userFilter) return;
+    const c = userFilter.value; 
+    const u = [...new Set(Object.values(entriesData).map(i => i.name).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'de'));
+    const newHtml = '<option value="all">-- Alle anzeigen --</option>' + u.map(x => `<option value="${escapeHtml(x)}"${x === c ? ' selected' : ''}>${escapeHtml(x)}</option>`).join('');
+    if (userFilter.innerHTML !== newHtml) { 
+        userFilter.innerHTML = newHtml; 
+        initCustomSelect(userFilter); 
+    }
+}
+
+const statusLabel = status => ({ offen: ['open', 'Offen'], gesehen: ['seen', 'Gesehen'], geschlossen: ['closed', 'Ausgezahlt'] }[status] || ['open', 'Offen']);
+
+function buildCard(i, isAdmin) {
+    const [cl, lb] = statusLabel(i.status); 
+    const isClosed = i.status === 'geschlossen';
+    let displayName = i.name || '–';
+    if (i.playerId) { 
+        const matchingKey = Object.values(keysData).find(k => k.id === i.playerId); 
+        if (matchingKey?.name) displayName = matchingKey.name; 
+    }
+    const ac = isAdmin ? `<div class="admin-actions">
+        <button class="btn-seen" data-action="seen" data-id="${escapeHtml(i.id)}" ${i.status === 'gesehen' || isClosed ? 'disabled' : ''}>Gesehen</button>
+        <button class="btn-close" data-action="close" data-id="${escapeHtml(i.id)}" ${isClosed ? 'disabled' : ''}>Bezahlt</button>
+        <button class="btn-delete" data-action="delete" data-id="${escapeHtml(i.id)}">Löschen</button>
+    </div>` : '';
+    const img = i.image ? `<img class="entry-thumb" loading="lazy" src="${escapeHtml(i.image)}" data-full="${escapeHtml(i.image)}" alt="Nachweis">` : '<div style="width:80px;height:80px;border-radius:10px;background:rgba(52,152,219,0.05);display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:12px;flex-shrink:0;">Kein Bild</div>';
+    return `<div class="entry-card"><span class="badge ${cl}">${lb}</span><div class="entry-content"><div class="entry-info"><p><strong>Name:</strong> ${escapeHtml(displayName)}</p><p><strong>Aktivität:</strong> ${escapeHtml(i.activity || '–')}</p><p><strong>Datum:</strong> ${escapeHtml(i.date || '–')}</p>${ac}</div>${img}</div></div>`;
+}
+
+function getFilteredEntries() {
+    const userF = $('userFilter')?.value || 'all'; 
+    const statusF = $('statusFilter')?.value || 'all'; 
+    const q = ($('entrySearch')?.value || '').trim().toLowerCase();
+    let it = Object.entries(entriesData).map(([id, d]) => ({ id, ...d }));
+    it = it.map(entry => { 
+        if (entry.playerId) { 
+            const matchingKey = Object.values(keysData).find(k => k.id === entry.playerId); 
+            if (matchingKey?.name) return { ...entry, name: matchingKey.name }; 
+        } 
+        return entry; 
+    });
+    if (userF !== 'all') it = it.filter(x => x.name === userF); 
+    if (statusF !== 'all') it = it.filter(x => (x.status || 'offen') === statusF); 
+    if (q) it = it.filter(x => (x.name || '').toLowerCase().includes(q) || (x.activity || '').toLowerCase().includes(q));
+    return it;
+}
+
+function renderEntries() {
+    let it = getFilteredEntries(); 
+    it.sort((a, b) => parseGermanDate(b.date) - parseGermanDate(a.date));
+    $('entriesCountPill')?.textContent = it.length;
+    const listEl = $('entriesList'); 
+    if (listEl) { 
+        listEl.innerHTML = it.length ? it.map(x => buildCard(x, true)).join('') : '<p class="empty-state">Keine Einträge gefunden.</p>'; 
+        attachImageClicks(listEl); 
+    }
+}
+
+function renderMyEntries() {
+    const n = currentUserData.name || ''; 
+    const userId = currentUserData.id || '';
+    let it = Object.entries(entriesData).map(([id, d]) => ({ id, ...d })).filter(x => x.name === n || x.playerId === userId);
+    it = it.map(entry => { 
+        if (entry.playerId && !entry.name) { 
+            const matchingKey = Object.values(keysData).find(k => k.id === entry.playerId); 
+            if (matchingKey?.name) return { ...entry, name: matchingKey.name }; 
+        } 
+        return entry; 
+    });
+    it.sort((a, b) => parseGermanDate(b.date) - parseGermanDate(a.date));
+    $('myEntriesCountPill')?.textContent = it.length;
+    const listEl = $('myEntriesList'); 
+    if (listEl) { 
+        listEl.innerHTML = n ? (it.length ? it.map(x => buildCard(x, false)).join('') : '<p class="empty-state">Noch keine Einreichungen vorhanden.</p>') : '<p class="empty-state">Kein Name gefunden.</p>'; 
+        attachImageClicks(listEl); 
+    }
+}
+
+function getSortedSummaryRows() {
+    let rows = Object.entries(entriesData).map(([id, d]) => ({
+        id, name: d.name || '–', dateRaw: d.date || '', dateSort: parseGermanDate(d.date),
+        activityLabel: (d.activity || '').split('(')[0].trim() || '–', amount: parseAmount(d.activity), status: d.status || 'offen'
+    }));
+    rows = rows.map(row => { 
+        if (row.name === '–' && row.id) { 
+            const entry = entriesData[row.id]; 
+            if (entry?.playerId) { 
+                const matchingKey = Object.values(keysData).find(k => k.id === entry.playerId); 
+                if (matchingKey?.name) return { ...row, name: matchingKey.name }; 
+            } 
+        } 
+        return row; 
+    });
+    const { col, dir } = sortState; 
+    const mult = dir === 'asc' ? 1 : -1;
+    rows.sort((a, b) => { 
+        let av, bv; 
+        switch (col) { 
+            case 'name': av = a.name.toLowerCase(); bv = b.name.toLowerCase(); break; 
+            case 'activity': av = a.activityLabel.toLowerCase(); bv = b.activityLabel.toLowerCase(); break; 
+            case 'amount': av = a.amount; bv = b.amount; break; 
+            case 'status': av = a.status; bv = b.status; break; 
+            case 'date': default: av = a.dateSort; bv = b.dateSort; break; 
+        } 
+        if (av < bv) return -1 * mult; 
+        if (av > bv) return 1 * mult; 
+        return 0; 
+    });
+    return rows;
+}
+
+function renderSummary() {
+    const rows = getSortedSummaryRows(); 
+    const adminSummaryBody = $('adminSummaryBody');
+    if (adminSummaryBody) { 
+        const rs = rows.map(r => `<tr><td>${escapeHtml(r.name)}</td><td>${escapeHtml(r.dateRaw.split(',')[0] || '–')}</td><td>${escapeHtml(r.activityLabel)}</td><td>$${r.amount.toLocaleString('de-DE')}</td><td>${escapeHtml(statusLabel(r.status)[1])}</td></tr>`).join('');
+        adminSummaryBody.innerHTML = rs || '<tr><td colspan="5" style="color:var(--muted)">Keine Daten</td></tr>'; 
+    }
+    updateSortArrows();
+}
+
+function updateSortArrows() { 
+    document.querySelectorAll('.sort-arrow').forEach(el => el.textContent = ''); 
+    const arrowEl = $(`sortArrow-${sortState.col}`); 
+    if (arrowEl) arrowEl.textContent = sortState.dir === 'asc' ? '▲' : '▼'; 
+}
+
+// Cap UI
+const updateCapUI = () => {
+    const n = currentUserData.name || ''; 
+    const userId = currentUserData.id || ''; 
+    const userEntries = Object.values(entriesData).filter(i => i.name === n || i.playerId === userId);
+    const t = userEntries.filter(i => i.status !== 'geschlossen').reduce((s, i) => s + parseAmount(i.activity), 0); 
+    const p = Math.min((t / config.PAYOUT_CAP) * 100, 100);
+    $('capLabel')?.textContent = `$${t.toLocaleString('de-DE')} / $${config.PAYOUT_CAP.toLocaleString('de-DE')}`;
+    const capBarFill = $('capBarFill'); 
+    if (capBarFill) { 
+        capBarFill.style.width = `${p}%`; 
+        capBarFill.classList.toggle('full', t >= config.PAYOUT_CAP); 
+    }
+    const isCapped = t >= config.PAYOUT_CAP; 
+    $('capWarning')?.classList.toggle('hidden', !isCapped);
+    const uploadArea = $('uploadFormArea'); 
+    if (isCapped && uploadArea && !uploadArea.dataset.cappedRendered) { 
+        uploadArea.innerHTML = '<div class="cap-reached-notice"><strong>Cap erreicht</strong>Du hast dein Bonus-Limit von $200.000 erreicht. Warte, bis offene Einreichungen ausgezahlt wurden.</div>'; 
+        uploadArea.dataset.cappedRendered = '1'; 
+    } else if (uploadArea && uploadArea.dataset.cappedRendered) { 
+        location.reload(); 
+    }
+};
+
+// File upload handlers
+const handleSelectedFile = file => {
+    if (!isValidImageFile(file)) { showToast('Nur Bilddateien sind erlaubt', 'error'); resetFileInput(); return; }
+    if (file.size > config.MAX_FILE_SIZE) { showToast('Bild zu groß (max. 20 MB)', 'error'); resetFileInput(); return; }
+    const reader = new FileReader();
+    reader.onload = e => { 
+        if ($('filePreviewImage')) $('filePreviewImage').src = e.target.result; 
+        if ($('fileNameLabel')) $('fileNameLabel').textContent = file.name; 
+        if ($('filePreviewContainer')) $('filePreviewContainer').classList.remove('hidden'); 
+        document.querySelector('.file-upload-trigger')?.classList.add('hidden'); 
+        setTimeout(openActivityModal, 300); 
+    };
+    reader.onerror = () => showToast('Bild konnte nicht gelesen werden', 'error');
+    reader.readAsDataURL(file);
+};
+
+const resetFileInput = () => { 
+    if ($('fileInput')) $('fileInput').value = ''; 
+    if ($('filePreviewContainer')) $('filePreviewContainer').classList.add('hidden'); 
+    document.querySelector('.file-upload-trigger')?.classList.remove('hidden'); 
+};
+
+const splitActivityLabel = text => { 
+    const m = text.match(/^(.*?)\s*\(([^)]+)\)\s*$/); 
+    return m ? { name: m[1], price: m[2] } : { name: text, price: '' }; 
+};
+
+// Activity modal
+let activityCardsCache = null;
+const getActivityCardsData = () => {
+    if (activityCardsCache) return activityCardsCache;
+    activityCardsCache = Array.from($('activitySelect')?.options || []).map(opt => { 
+        const { name, price } = splitActivityLabel(opt.value); 
+        return { value: opt.value, name, price, search: name.toLowerCase(), acronym: getAcronym(name) }; 
+    });
+    return activityCardsCache;
+};
+
+const openActivityModal = () => {
+    const cardsData = getActivityCardsData();
+    const cardsHtml = cardsData.map(c => `<div class="activity-card" data-value="${escapeHtml(c.value)}" data-search="${escapeHtml(c.search)}" data-acronym="${escapeHtml(c.acronym)}" tabindex="0" role="button"><span class="activity-card-main"><span class="activity-card-check"></span><span class="activity-card-name">${escapeHtml(c.name)}</span></span><span class="activity-card-price">${escapeHtml(c.price)}</span></div>`).join('');
+    const content = `<div class="activity-search-wrapper"><input type="search" id="activitySearchInput" placeholder="Suchen (z.B. FZ, AOT, Ter)..." autocomplete="off"><span class="activity-search-clear hidden" id="activitySearchClear" title="Suche leeren">&times;</span></div><p class="activity-count-hint" id="activityCountHint"></p><div class="activity-grid" id="activityGrid">${cardsHtml}</div><p id="activityNoResults" class="empty-state hidden">Keine Treffer gefunden.</p>`;
+    const footer = `<button id="modalSubmitBtn" disabled>Nachweis einreichen</button><button class="btn-outline" id="modalCancelSubmitBtn">Abbrechen</button>`;
+    openFormModal('Aktivität wählen', content, footer);
+    let selectedValue = ''; 
+    const grid = $('activityGrid'), submitBtn = $('modalSubmitBtn'), searchInput = $('activitySearchInput'), clearBtn = $('activitySearchClear'), noResultsEl = $('activityNoResults'), countHintEl = $('activityCountHint');
+    const cardEls = grid ? Array.from(grid.querySelectorAll('.activity-card')) : []; 
+    const total = cardEls.length;
+    const updateCountHint = visible => { if (countHintEl) countHintEl.textContent = visible === total ? `${total} Aktivitäten` : `${visible} von ${total} Aktivitäten`; };
+    if (countHintEl) updateCountHint(total);
+    if (grid) grid.querySelectorAll('.activity-card').forEach(card => { 
+        const select = () => { 
+            grid.querySelectorAll('.activity-card.selected').forEach(c => c.classList.remove('selected')); 
+            card.classList.add('selected'); 
+            selectedValue = card.dataset.value; 
+            if (submitBtn) submitBtn.disabled = false; 
+        }; 
+        card.addEventListener('click', select); 
+        card.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); select(); } }); 
+    });
+    let filterRaf = null; 
+    const filterActivities = () => { 
+        if (!searchInput || !clearBtn || !noResultsEl) return; 
+        const q = searchInput.value.toLowerCase().trim(); 
+        clearBtn.classList.toggle('hidden', q === ''); 
+        let visible = 0; 
+        for (let i = 0; i < cardEls.length; i++) { 
+            const card = cardEls[i]; 
+            const match = q === '' || card.dataset.search.includes(q) || card.dataset.acronym.includes(q); 
+            if (match) visible++; 
+            if (card.classList.contains('hidden') !== !match) card.classList.toggle('hidden', !match); 
+        } 
+        noResultsEl.classList.toggle('hidden', visible !== 0); 
+        updateCountHint(visible); 
+    };
+    if (searchInput) searchInput.addEventListener('input', () => { 
+        if (filterRaf) cancelAnimationFrame(filterRaf); 
+        filterRaf = requestAnimationFrame(filterActivities); 
+    });
+    if (clearBtn) clearBtn.addEventListener('click', () => { 
+        if (searchInput) { searchInput.value = ''; filterActivities(); searchInput.focus(); } 
+    });
+    if (searchInput) searchInput.addEventListener('keydown', e => { 
+        if (e.key === 'Escape') { if (searchInput.value) { searchInput.value = ''; filterActivities(); } else searchInput.blur(); } 
+        else if (e.key === 'Enter') { const firstVisible = cardEls.find(c => !c.classList.contains('hidden')); if (firstVisible) firstVisible.click(); } 
+    });
+    setTimeout(() => { if (searchInput) searchInput.focus(); }, 300);
+    $('modalCancelSubmitBtn')?.addEventListener('click', () => { closeFormModal(); resetFileInput(); });
+    if (submitBtn) submitBtn.addEventListener('click', async ev => { if (selectedValue) await submitEntry(selectedValue, ev.currentTarget); });
+};
+
+// Submit entry
+const submitEntry = async (activity, submitBtn) => {
+    const n = currentUserData.name || '', userId = currentUserData.id || '', f = $('fileInput')?.files[0];
+    if (!n) return showToast('Kein Name gefunden', 'error');
+    if (!f) return showToast('Bitte ein Bild auswählen', 'error');
+    const userEntries = Object.values(entriesData).filter(i => i.name === n || i.playerId === userId);
+    const curCap = userEntries.filter(i => i.status !== 'geschlossen').reduce((s, i) => s + parseAmount(i.activity), 0);
+    if (curCap >= config.PAYOUT_CAP) return showToast('Cap erreicht - keine weiteren Einsendungen möglich!', 'error');
+    let finalActivity = activity; 
+    const entryAmount = parseAmount(activity);
+    if (curCap + entryAmount > config.PAYOUT_CAP) { 
+        const allowedAmount = config.PAYOUT_CAP - curCap; 
+        const { name } = splitActivityLabel(activity); 
+        finalActivity = `${name} (${allowedAmount.toLocaleString('de-DE')}$)`; 
+        showToast(`Einsendung wurde auf das Restlimit von $${allowedAmount.toLocaleString('de-DE')} gekürzt.`, 'info'); 
+    }
+    if (submitBtn) setBtnLoading(submitBtn, true, 'Wird gesendet…', 'Nachweis einreichen');
+    const loadingArea = $('loadingArea'); 
+    if (loadingArea) loadingArea.classList.remove('hidden');
+    try { 
+        const b = await fileToBase64(f); 
+        const newEntryRef = window.firebasePush(window.firebaseRef(window.db, 'uploads'));
+        await window.firebaseSet(newEntryRef, { 
+            name: n, 
+            activity: finalActivity, 
+            image: b, 
+            date: new Date().toLocaleString('de-DE'), 
+            status: 'offen', 
+            playerId: userId 
+        }); 
+        closeFormModal(); 
+        resetFileInput(); 
+        showToast('Nachweis erfolgreich eingereicht!', 'success'); 
+    } catch (e) { showToast('Upload fehlgeschlagen: ' + e.message, 'error'); } 
+    finally { 
+        if (loadingArea) loadingArea.classList.add('hidden'); 
+        if (submitBtn) setBtnLoading(submitBtn, false, '', 'Nachweis einreichen'); 
+    }
+};
+
+// Tool handlers
+const initKeyGenerator = () => {
+    const content = `<div class="form-group"><label>Antrag aus Discord einfügen (Autofill)</label><input type="text" id="modalAutofillInput" placeholder="Discord | Ingame | ID | Abteilung" autocomplete="off"></div><div class="divider"></div><div class="form-row"><div class="form-group"><label>Spieler-ID</label><input type="number" id="modalKeyId" placeholder="z.B. 102476"></div><div class="form-group"><label>Key Anfang</label><input type="text" id="modalKeyPrefix" maxlength="2" placeholder="AA" value="AA"></div></div><div class="form-group"><label>Name</label><input type="text" id="modalKeyName" placeholder="Vollständiger Name"></div><div class="form-group"><label>Abteilung</label><input type="text" id="modalKeyDept" placeholder="z.B. HRT"></div><div class="form-group"><label>Key Rang</label><select id="modalRoleSelect"><option value="user">User</option><option value="admin">Admin</option><option value="owner">Owner</option></select></div><div class="form-group"><label>Generierter Key</label><div class="readonly-key-row"><input type="text" id="modalOutputKey" readonly placeholder="Key erscheint hier…"><button type="button" class="btn-outline" id="modalCopyKeyBtn">Kopieren</button></div></div>`;
+    const footer = `<button id="modalGenerateKeyBtn">Key erstellen</button><button class="btn-outline" id="modalCloseKeyBtn">Schließen</button>`;
+    openFormModal('Key Manager', content, footer);
+    initCustomSelect($('modalRoleSelect'));
+    $('modalCloseKeyBtn')?.addEventListener('click', closeFormModal);
+    $('modalCopyKeyBtn')?.addEventListener('click', async () => { 
+        const val = $('modalOutputKey')?.value; 
+        if (!val) return showToast('Kein Key vorhanden', 'error'); 
+        const ok = await copyToClipboard(val); 
+        showToast(ok ? 'Key kopiert!' : 'Kopieren fehlgeschlagen', ok ? 'success' : 'error'); 
+    });
+    $('modalAutofillInput')?.addEventListener('input', e => { 
+        const parts = e.target.value.split('|').map(s => s.trim()); 
+        if (parts.length >= 4) { 
+            if ($('modalKeyName')) $('modalKeyName').value = parts[1] || ''; 
+            if ($('modalKeyId')) $('modalKeyId').value = parts[2] || ''; 
+            if ($('modalKeyDept')) $('modalKeyDept').value = parts[3] || ''; 
+            if (parts[1] && $('modalKeyPrefix')) $('modalKeyPrefix').value = derivePrefix(parts[1]); 
+        } 
+    });
+    $('modalGenerateKeyBtn')?.addEventListener('click', async ev => { 
+        const id = $('modalKeyId')?.value.trim() || '', nm = $('modalKeyName')?.value.trim() || '', dp = $('modalKeyDept')?.value.trim() || '', rl = $('modalRoleSelect')?.value || 'user', pr = ($('modalKeyPrefix')?.value || 'AA').toUpperCase().substring(0, 2); 
+        if (!id || !nm) return showToast('ID und Name sind Pflichtfelder', 'error'); 
+        const k = `${pr}_${generateSecureRandomString(16)}`; 
+        setBtnLoading(ev.currentTarget, true, 'Wird erstellt…', 'Key erstellen'); 
+        try { 
+            await window.firebaseSet(window.firebaseRef(window.db, `keys/${k}`), { id, name: nm, role: rl, department: dp }); 
+            if ($('modalOutputKey')) $('modalOutputKey').value = k; 
+            showToast('Key erstellt!', 'success'); 
+        } catch (e) { showToast('Fehler: ' + e.message, 'error'); } 
+        finally { setBtnLoading(ev.currentTarget, false, '', 'Key erstellen'); } 
+    });
+};
+
+const initCodeGenerator = () => {
+    const users = Object.entries(keysData).map(([k, v]) => ({ key: k, name: v.name || k, id: v.id || '0' })).sort((a, b) => a.name.localeCompare(b.name, 'de'));
+    const userOptions = users.map(u => `<option value="${escapeHtml(u.key)}">${escapeHtml(u.name)} (ID: ${escapeHtml(u.id)})</option>`).join('');
+    const content = `<div class="form-group"><label>User auswählen</label><select id="modalCodeUserSelect"><option value="">-- User wählen --</option>${userOptions}</select></div><div class="form-group"><label>Generierte Codes</label><textarea id="modalOutputCodes" class="code-output" readonly placeholder="Codes erscheinen hier…"></textarea></div>`;
+    const footer = `<button id="modalGenerateCodeBtn">Code generieren</button><button class="btn-outline" id="modalGenerateAllCodesBtn">Alle Codes</button><button class="btn-outline" id="modalCopyCodesBtn">Kopieren</button><button class="btn-outline" id="modalCloseCodesBtn">Schließen</button>`;
+    openFormModal('Auszahlungs Codes', content, footer);
+    initCustomSelect($('modalCodeUserSelect'));
+    $('modalCloseCodesBtn')?.addEventListener('click', closeFormModal);
+    $('modalCopyCodesBtn')?.addEventListener('click', async () => { 
+        const val = $('modalOutputCodes')?.value; 
+        if (!val) return showToast('Keine Codes vorhanden', 'error'); 
+        const ok = await copyToClipboard(val); 
+        showToast(ok ? 'Kopiert!' : 'Kopieren fehlgeschlagen', ok ? 'success' : 'error'); 
+    });
+    $('modalGenerateCodeBtn')?.addEventListener('click', () => { 
+        const k = $('modalCodeUserSelect')?.value; 
+        if (!k) return showToast('Bitte User wählen', 'error'); 
+        const ud = keysData[k]; 
+        if (!ud) return showToast('User nicht gefunden', 'error'); 
+        const userId = ud.id || '', userName = ud.name || k; 
+        const us = Object.values(entriesData).filter(x => x.name === userName || x.playerId === userId); 
+        const tm = us.filter(x => x.status !== 'geschlossen').reduce((s, x) => s + parseAmount(x.activity), 0); 
+        if (tm === 0) return showToast('Keine offenen Boni', 'error'); 
+        if ($('modalOutputCodes')) $('modalOutputCodes').value = `${userId};${tm};HRTPrämie\n`; 
+    });
+    $('modalGenerateAllCodesBtn')?.addEventListener('click', () => { 
+        let cd = ''; 
+        Object.values(keysData).forEach(ud => { 
+            const userId = ud.id || '', userName = ud.name || ''; 
+            const us = Object.values(entriesData).filter(x => x.name === userName || x.playerId === userId); 
+            const tm = us.filter(x => x.status !== 'geschlossen').reduce((s, x) => s + parseAmount(x.activity), 0); 
+            if (tm > 0) cd += `${userId};${tm};HRTPrämie\n`; 
+        }); 
+        if ($('modalOutputCodes')) $('modalOutputCodes').value = cd || 'Keine offenen Boni gefunden.'; 
+    });
+};
+
+const initBonusListGenerator = () => {
+    const users = {}; 
+    Object.values(entriesData).forEach(e => { 
+        if (e.status === 'offen' || e.status === 'gesehen') { 
+            let name = e.name || 'Unbekannt'; 
+            if (e.playerId) { 
+                const matchingKey = Object.values(keysData).find(k => k.id === e.playerId); 
+                if (matchingKey?.name) name = matchingKey.name; 
+            } 
+            users[name] = (users[name] || 0) + parseAmount(e.activity); 
+        } 
+    });
+    let listText = "Bonusliste \n\n"; 
+    let total = 0; 
+    Object.keys(users).sort((a, b) => a.localeCompare(b, 'de')).forEach(n => { 
+        listText += `- **${n}**: $${users[n].toLocaleString('de-DE')}\n`; 
+        total += users[n]; 
+    }); 
+    listText += `\n**Gesamtsumme: $${total.toLocaleString('de-DE')}**`;
+    const content = `<div class="form-group"><label>Discord Liste</label><textarea id="modalOutputBonusList" class="code-output" style="min-height:250px;" readonly>${escapeHtml(listText)}</textarea></div>`;
+    const footer = `<button id="modalCopyBonusBtn">Kopieren</button><button class="btn-outline" id="modalCloseBonusBtn">Schließen</button>`;
+    openFormModal('Boni Liste', content, footer);
+    $('modalCloseBonusBtn')?.addEventListener('click', closeFormModal);
+    $('modalCopyBonusBtn')?.addEventListener('click', async () => { 
+        const ok = await copyToClipboard(listText); 
+        showToast(ok ? 'Kopiert!' : 'Kopieren fehlgeschlagen', ok ? 'success' : 'error'); 
+    });
+};
+
+const initDeleteAll = () => { 
+    if (confirm('Wirklich ALLE Einsendungen löschen?')) { 
+        const btn = $('deleteAllBtn'); 
+        setBtnLoading(btn, true, 'Wird gelöscht…', 'Alle Einsendungen löschen'); 
+        window.firebaseSet(window.firebaseRef(window.db, 'uploads'), null).then(() => showToast('Gelöscht')).catch(e => showToast('Fehler: ' + e.message, 'error')).finally(() => setBtnLoading(btn, false, '', 'Alle Einsendungen löschen')); 
+    } 
+};
+
+const initExport = () => { 
+    const btn = $('exportBtn'); 
+    const loading = $('exportLoadingArea'); 
+    if (loading) loading.classList.remove('hidden'); 
+    btn.disabled = true; 
+    (async () => { 
+        try { 
+            const zip = new JSZip(); 
+            Object.entries(entriesData).forEach(([id, entry]) => { 
+                if (!entry.image || !entry.name) return; 
+                let safeName = String(entry.name).replace(/[\\/:*?"<>|]/g, '_'); 
+                if (entry.playerId) { 
+                    const matchingKey = Object.values(keysData).find(k => k.id === entry.playerId); 
+                    if (matchingKey?.name) safeName = String(matchingKey.name).replace(/[\\/:*?"<>|]/g, '_'); 
+                } 
+                const folder = zip.folder(safeName); 
+                const imgData = entry.image.split(',')[1]; 
+                if (imgData) folder.file(`${id}.png`, imgData, { base64: true }); 
+            }); 
+            const blob = await zip.generateAsync({ type: "blob" }); 
+            const url = window.URL.createObjectURL(blob); 
+            const a = document.createElement('a'); 
+            a.href = url; 
+            a.download = `HRT_Export_${new Date().toLocaleDateString('de-DE').replace(/\./g, '-')}.zip`; 
+            document.body.appendChild(a); 
+            a.click(); 
+            a.remove(); 
+            setTimeout(() => window.URL.revokeObjectURL(url), 1000); 
+            showToast('Export erfolgreich!'); 
+        } catch (e) { showToast('Fehler: ' + e.message, 'error'); } 
+        finally { 
+            if (loading) loading.classList.add('hidden'); 
+            btn.disabled = false; 
+        } 
+    })(); 
+};
+
+// Initialize everything when DOM is ready
+document.addEventListener('DOMContentLoaded', () => {
+    // Modal handlers
+    $('formModalClose')?.addEventListener('click', closeFormModal);
+    $('formModalOverlay')?.addEventListener('click', closeFormModal);
+    document.addEventListener('keydown', e => { if (e.key === 'Escape' && $('formModal')?.classList.contains('active')) closeFormModal(); });
+    
+    // Login/Logout
+    $('loginBtn')?.addEventListener('click', () => authenticate($('keyInput')?.value.trim() || ''));
+    $('keyInput')?.addEventListener('keydown', e => { if (e.key === 'Enter') authenticate($('keyInput')?.value.trim() || ''); });
+    $('logoutBtn')?.addEventListener('click', () => { localStorage.removeItem(config.SESSION_KEY); location.reload(); });
+    $('linkToRegister')?.addEventListener('click', () => { $('authPanelLogin')?.classList.add('hidden'); $('authPanelRegister')?.classList.remove('hidden'); });
+    $('linkToLogin')?.addEventListener('click', () => { $('authPanelRegister')?.classList.add('hidden'); $('authPanelLogin')?.classList.remove('hidden'); });
+    
+    // Register
+    const registerBtn = $('registerBtn');
+    if (registerBtn) {
+        registerBtn.addEventListener('click', async () => {
+            const n = $('regName')?.value.trim() || '', dc = $('regDiscord')?.value.trim() || '', i = $('regId')?.value.trim() || '', dept = $('regDept')?.value.trim() || '';
+            if (!n) return showToast('Bitte deinen Ingame-Namen eingeben', 'error');
+            if (!dc) return showToast('Bitte deinen Discord-Namen eingeben', 'error');
+            if (!i) return showToast('Bitte eine Spieler-ID eingeben', 'error');
+            if (!dept) return showToast('Bitte deine Abteilung eingeben', 'error');
+            setBtnLoading(registerBtn, true, 'Wird gesendet…', 'Antrag absenden');
+            try {
+                await fetch(config.DISCORD_WEBHOOK, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ content: `${dc} | ${n} | ${i} | ${dept}` }) });
+                showToast('Antrag wurde gesendet!');
+                ['regName','regDiscord','regId','regDept'].forEach(id => $(id) && ($(id).value = ''));
+                $('authPanelRegister')?.classList.add('hidden'); $('authPanelLogin')?.classList.remove('hidden');
+            } catch { showToast('Fehler beim Senden', 'error'); } finally { setBtnLoading(registerBtn, false, '', 'Antrag absenden'); }
+        });
+    }
+    
+    // Sort handlers
+    document.querySelectorAll('.summary-table th[data-sort]').forEach(th => {
+        th.addEventListener('click', () => {
+            const col = th.dataset.sort;
+            if (sortState.col === col) sortState.dir = sortState.dir === 'asc' ? 'desc' : 'asc';
+            else { sortState.col = col; sortState.dir = col === 'date' ? 'desc' : 'asc'; }
+            renderSummary();
+        });
+    });
+    
+    // Filter handlers
+    $('userFilter')?.addEventListener('change', renderEntries);
+    $('statusFilter')?.addEventListener('change', renderEntries);
+    initCustomSelect($('userFilter')); initCustomSelect($('statusFilter'));
+    let searchDebounce; $('entrySearch')?.addEventListener('input', () => { clearTimeout(searchDebounce); searchDebounce = setTimeout(renderEntries, 150); });
+    
+    // Admin actions
+    document.addEventListener('click', async e => {
+        const btn = e.target.closest('button'); if (!btn) return;
+        const { action, id } = btn.dataset; if (!action || !id) return;
+        const originalHtml = btn.innerHTML;
+        try {
+            if (action === 'delete') { if (confirm('Eintrag wirklich löschen?')) { btn.disabled = true; await window.firebaseRemove(window.firebaseRef(window.db, `uploads/${id}`)); showToast('Eintrag gelöscht'); } }
+            else if (action === 'seen') { btn.disabled = true; await window.firebaseUpdate(window.firebaseRef(window.db, `uploads/${id}`), { status: 'gesehen' }); showToast('Als gesehen markiert'); }
+            else if (action === 'close') { btn.disabled = true; await window.firebaseUpdate(window.firebaseRef(window.db, `uploads/${id}`), { status: 'geschlossen' }); showToast('Als ausgezahlt markiert', 'success'); }
+        } catch (err) { btn.disabled = false; btn.innerHTML = originalHtml; showToast('Fehler: ' + err.message, 'error'); }
+    });
+    
+    // File upload
+    const fileUploadTrigger = $('fileUploadTrigger'), fileUploadWrapper = $('fileUploadWrapper');
+    if (fileUploadTrigger && fileUploadWrapper) {
+        fileUploadWrapper.addEventListener('click', e => { if (e.target.closest('#filePreviewContainer')) return; $('fileInput').click(); });
+        ['dragenter','dragover'].forEach(evt => fileUploadTrigger.addEventListener(evt, e => { e.preventDefault(); e.stopPropagation(); fileUploadTrigger.classList.add('dragover'); }));
+        ['dragleave','drop'].forEach(evt => fileUploadTrigger.addEventListener(evt, e => { e.preventDefault(); e.stopPropagation(); fileUploadTrigger.classList.remove('dragover'); }));
+        fileUploadTrigger.addEventListener('drop', e => { const f = e.dataTransfer.files?.[0]; if (f) { $('fileInput').files = e.dataTransfer.files; handleSelectedFile(f); } });
+        $('fileInput')?.addEventListener('change', e => { const file = e.target.files[0]; if (file) handleSelectedFile(file); });
+    }
+    $('removeFileBtn')?.addEventListener('click', e => { e.stopPropagation(); resetFileInput(); });
+    
+    // Tool buttons
+    $('openKeyGeneratorBtn')?.addEventListener('click', initKeyGenerator);
+    $('openCodeGeneratorBtn')?.addEventListener('click', initCodeGenerator);
+    $('openBonusListBtn')?.addEventListener('click', initBonusListGenerator);
+    $('exportBtn')?.addEventListener('click', initExport);
+    $('deleteAllBtn')?.addEventListener('click', initDeleteAll);
+    
+    // Initialize custom selects
+    document.querySelectorAll('select:not(#activitySelect)').forEach(initCustomSelect);
+    
+    // Initialize Firebase and check session
+    initFirebase().then(success => {
+        if (success) {
+            const k = localStorage.getItem(config.SESSION_KEY);
+            if (k) authenticate(k, true);
+        }
+    });
+});
